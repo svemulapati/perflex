@@ -61,12 +61,10 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 | ![Script leaderboard with per-function hotspots](docs/screenshots/scripts.png) | ![Zoomable interaction timeline with causal chain](docs/screenshots/timeline.png) |
 | **Per-script & per-function attribution** | **Interaction causal chains** |
 
-| Findings & Remediation | In-page Overlay |
+| Findings & Remediation | Settings |
 |:---:|:---:|
-| ![Findings with before/after fix and risk level](docs/screenshots/findings.png) | ![Live FPS / heap overlay](docs/screenshots/overlay.png) |
-| **30+ detectors with business-safe fixes** | **Live HUD on any page (`Ctrl+Shift+X`)** |
-
-> 📷 *Maintainers: see [`docs/screenshots/`](docs/screenshots/) for the exact shots to capture.*
+| ![Findings with before/after fix and risk level](docs/screenshots/findings.png) | ![Settings — AI key, first-party domains, share & export](docs/screenshots/settings.png) |
+| **30+ detectors with business-safe fixes** | **AI remediation, sharing & export** |
 
 ## 🚀 Install in 60 seconds
 
