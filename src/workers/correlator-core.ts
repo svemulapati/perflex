@@ -416,7 +416,10 @@ export class Correlator {
       }
 
       case 'event': {
+        // Bounded: this is sorted on every snapshot, so it must not grow with
+        // session length. The most recent samples are what INP cares about.
         this.interactionDurations.push(event.duration);
+        if (this.interactionDurations.length > 1000) this.interactionDurations.shift();
         break;
       }
 

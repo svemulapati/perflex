@@ -25,22 +25,24 @@ interface CollectorMessage {
 let pending: CollectorEvent[] = [];
 let flushScheduled = false;
 
+function flushNow(): void {
+  flushScheduled = false;
+  if (pending.length === 0) return;
+  const events = pending;
+  pending = [];
+  const msg: RuntimeMessage = { type: 'perflex:events', events };
+  try {
+    chrome.runtime.sendMessage(msg).catch(() => {});
+  } catch {
+    /* extension context invalidated (e.g. reload) — ignore */
+  }
+}
+
 function scheduleFlush(): void {
   if (flushScheduled) return;
   flushScheduled = true;
   // Coalesce relays to the worker to keep messaging cheap.
-  setTimeout(() => {
-    flushScheduled = false;
-    if (pending.length === 0) return;
-    const events = pending;
-    pending = [];
-    const msg: RuntimeMessage = { type: 'perflex:events', events };
-    try {
-      chrome.runtime.sendMessage(msg).catch(() => {});
-    } catch {
-      /* extension context invalidated (e.g. reload) — ignore */
-    }
-  }, 150);
+  setTimeout(flushNow, 150);
 }
 
 window.addEventListener('message', (e: MessageEvent) => {
@@ -50,7 +52,10 @@ window.addEventListener('message', (e: MessageEvent) => {
 
   if (data.kind === 'events' && data.events) {
     pending.push(...data.events);
-    scheduleFlush();
+    // Relay user-input events immediately — a navigating click can tear the
+    // page down before the 150ms coalescing window elapses.
+    if (data.events.some((ev) => ev.kind === 'interaction')) flushNow();
+    else scheduleFlush();
   } else if (data.kind === 'meta') {
     // Forward live meta immediately (fps/throttle) — small and time-sensitive.
     try {

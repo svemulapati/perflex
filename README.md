@@ -47,6 +47,27 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 - 🔗 **Shareable permalinks** — share a read-only snapshot of a session as a **permalink** (the whole session is gzip-compressed into the URL fragment — never uploaded) or as a **self-contained HTML file** that opens offline with no extension or server.
 - 🔒 **100% local & private** — no servers, no telemetry, no account.
 
+## 📸 Screenshots
+
+<div align="center">
+
+### Overview — health score, Core Web Vitals, detected frameworks & top offenders
+![Perflex Overview tab](docs/screenshots/overview.png)
+
+</div>
+
+| Script Leaderboard | Session Timeline |
+|:---:|:---:|
+| ![Script leaderboard with per-function hotspots](docs/screenshots/scripts.png) | ![Zoomable interaction timeline with causal chain](docs/screenshots/timeline.png) |
+| **Per-script & per-function attribution** | **Interaction causal chains** |
+
+| Findings & Remediation | In-page Overlay |
+|:---:|:---:|
+| ![Findings with before/after fix and risk level](docs/screenshots/findings.png) | ![Live FPS / heap overlay](docs/screenshots/overlay.png) |
+| **30+ detectors with business-safe fixes** | **Live HUD on any page (`Ctrl+Shift+X`)** |
+
+> 📷 *Maintainers: see [`docs/screenshots/`](docs/screenshots/) for the exact shots to capture.*
+
 ## 🚀 Install in 60 seconds
 
 > Perflex is currently distributed as an unpacked extension (Chrome Web Store listing coming soon).

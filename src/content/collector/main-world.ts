@@ -53,8 +53,9 @@ function start(): void {
     if (event.kind === 'longtask') liveStats.longTasks++;
     else if (event.kind === 'memory') liveStats.heapMB = event.usedJSHeapSize / 1_048_576;
     else if (event.kind === 'network') liveStats.reqTimes.push(event.timestamp);
-    // Hard cap a single batch so a burst can't blow memory before flush.
-    if (batch.length >= 2000) flush();
+    // Flush immediately on user input (so a navigating click is sent before the
+    // page unloads), or when a single batch grows too large.
+    if (event.kind === 'interaction' || batch.length >= 2000) flush();
   }, breaker);
 
   const post = (msg: CollectorMessage) => {
