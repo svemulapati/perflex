@@ -51,8 +51,9 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 
 <div align="center">
 
-### Overview — health score, Core Web Vitals, detected frameworks & top offenders
-![Perflex Overview tab](docs/screenshots/overview.png)
+![Perflex — a tour of the dashboard](docs/screenshots/demo.gif)
+
+*A quick tour — Overview · Scripts · Timeline · Findings · Settings*
 
 </div>
 
