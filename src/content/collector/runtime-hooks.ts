@@ -3,9 +3,13 @@ import { fingerprintStack } from '@/shared/hash';
 import type { CollectorContext } from './context';
 
 /**
- * Lightweight runtime instrumentation feeding several Phase-3 anti-pattern
- * matchers: JSON.parse cost, expensive DOM queries, console-spam rate, plus a
- * low-frequency sampler for DOM size / layer promotion / high-frequency input.
+ * Lightweight runtime instrumentation feeding several anti-pattern matchers:
+ * JSON.parse cost, expensive querySelectorAll calls, and a low-frequency sampler
+ * for DOM size / layer promotion / high-frequency input.
+ *
+ * NOTE: we deliberately do NOT wrap console.* — doing so rewrites the source
+ * location of every page log to point at this file, which is hostile to the
+ * developers who are Perflex's users.
  */
 export function setupRuntimeHooks(ctx: CollectorContext): () => void {
   const restorers: Array<() => void> = [];
@@ -15,9 +19,10 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
   JSON.parse = function (this: unknown, text: string, reviver?: Parameters<typeof JSON.parse>[1]) {
     const size = typeof text === 'string' ? text.length : 0;
     const start = performance.now();
+    // Run the real parse OUTSIDE try/catch so invalid-JSON throws propagate
+    // exactly as the page expects.
     const result = origParse.call(JSON, text, reviver as never);
     const duration = performance.now() - start;
-    // Only report parses of non-trivial payloads to keep volume low.
     if (size > 10_000) {
       ctx.measure(() => {
         const event: JsonParseEvent = {
@@ -37,35 +42,33 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
     JSON.parse = origParse;
   });
 
-  // ---- Expensive DOM queries ----
+  // ---- Expensive querySelectorAll (the call that actually gets costly) ----
+  // We intentionally do NOT wrap the single-result querySelector: it's an
+  // extremely hot path and rarely the performance problem.
   const complexity = (sel: string): number => {
     if (typeof sel !== 'string') return 0;
-    // Rough cost proxy: combinators + pseudo-selectors + attribute selectors.
     return (sel.match(/[>~+\s]+/g)?.length ?? 0) + (sel.match(/::?|\[/g)?.length ?? 0);
   };
-  const wrapQuery = (proto: object, method: 'querySelectorAll' | 'querySelector') => {
+  const wrapQueryAll = (proto: object) => {
     const obj = proto as Record<string, (...a: unknown[]) => unknown>;
-    const orig = obj[method];
+    const orig = obj.querySelectorAll;
     if (typeof orig !== 'function') return;
-    obj[method] = function (this: unknown, ...args: unknown[]) {
-      const selector = String(args[0] ?? '');
+    obj.querySelectorAll = function (this: unknown, ...args: unknown[]) {
       const start = performance.now();
-      const result = orig.call(this, ...args);
+      const result = orig.apply(this, args);
       const duration = performance.now() - start;
-      // Report only slow or complex queries.
-      if (duration > 1 || complexity(selector) > 3) {
+      if (duration > 1) {
         ctx.measure(() => {
-          const count =
-            method === 'querySelectorAll' ? (result as NodeList)?.length ?? 0 : result ? 1 : 0;
+          const selector = String(args[0] ?? '');
           const event: DomQueryEvent = {
             seq: 0,
             kind: 'dom-query',
             timestamp: start,
             fingerprint: fingerprintStack(new Error().stack),
-            selector: String(selector).slice(0, 120),
+            selector: selector.slice(0, 120),
             complexity: complexity(selector),
             duration,
-            resultCount: count,
+            resultCount: (result as NodeList)?.length ?? 0,
           };
           ctx.emit(event);
         });
@@ -73,28 +76,11 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
       return result;
     };
     restorers.push(() => {
-      obj[method] = orig;
+      obj.querySelectorAll = orig;
     });
   };
-  wrapQuery(Document.prototype, 'querySelectorAll');
-  wrapQuery(Document.prototype, 'querySelector');
-  wrapQuery(Element.prototype, 'querySelectorAll');
-  wrapQuery(Element.prototype, 'querySelector');
-
-  // ---- console spam counter ----
-  let consoleCount = 0;
-  const consoleMethods: Array<keyof Console> = ['log', 'warn', 'error', 'info', 'debug'];
-  for (const m of consoleMethods) {
-    const orig = console[m] as (...a: unknown[]) => void;
-    if (typeof orig !== 'function') continue;
-    (console as unknown as Record<string, unknown>)[m] = function (this: unknown, ...args: unknown[]) {
-      consoleCount++;
-      return orig.apply(this, args);
-    };
-    restorers.push(() => {
-      (console as unknown as Record<string, unknown>)[m] = orig;
-    });
-  }
+  wrapQueryAll(Document.prototype);
+  wrapQueryAll(Element.prototype);
 
   // ---- high-frequency input counters (passive, no handler patching) ----
   let scrollCount = 0;
@@ -116,53 +102,55 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
 
   // ---- periodic DOM/runtime sampler ----
   const SAMPLE_MS = 3000;
+  const SCAN_CAP = 4000; // bound the per-sample DOM work
+  let timer = 0;
   const sample = () => {
     ctx.measure(() => {
       let elementCount = 0;
       let maxDepth = 0;
       let longestSiblingRun = 0;
       let willChangeCount = 0;
-      try {
-        const all = document.querySelectorAll('*');
-        elementCount = all.length;
-        // Longest run of same-tag siblings (unbounded-list signal) + max depth,
-        // computed in a single pass over a bounded sample.
-        const limit = Math.min(all.length, 6000);
-        for (let i = 0; i < limit; i++) {
-          const el = all[i];
-          let depth = 0;
-          let p: Node | null = el;
-          while (p && depth < 64) {
-            p = p.parentNode;
-            depth++;
+      // Skip the (relatively) expensive DOM scan while throttled — keep only the
+      // cheap input counters so we never add load to an already-busy page.
+      if (ctx.breaker.throttleLevel === 'none') {
+        try {
+          const all = document.querySelectorAll('*');
+          elementCount = all.length;
+          const limit = Math.min(elementCount, SCAN_CAP);
+          for (let i = 0; i < limit; i++) {
+            const el = all[i];
+            // depth
+            let depth = 0;
+            let p: Node | null = el;
+            while (p && depth < 64) {
+              p = p.parentNode;
+              depth++;
+            }
+            if (depth > maxDepth) maxDepth = depth;
+            // same-tag sibling run (only worth checking on high-fanout parents)
+            const children = el.children;
+            if (children.length >= 50) {
+              let run = 1;
+              for (let j = 1; j < children.length; j++) {
+                if (children[j].tagName === children[j - 1].tagName) {
+                  if (++run > longestSiblingRun) longestSiblingRun = run;
+                } else run = 1;
+              }
+            }
           }
-          if (depth > maxDepth) maxDepth = depth;
+          willChangeCount = document.querySelectorAll(
+            '[style*="will-change"],[style*="translateZ"],[style*="translate3d"]'
+          ).length;
+        } catch {
+          /* ignore */
         }
-        // Same-tag sibling runs: check children of elements with many children.
-        const parents = document.querySelectorAll('*');
-        for (let i = 0; i < Math.min(parents.length, 6000); i++) {
-          const children = parents[i].children;
-          if (children.length < 50) continue;
-          let run = 1;
-          for (let j = 1; j < children.length; j++) {
-            if (children[j].tagName === children[j - 1].tagName) {
-              run++;
-              if (run > longestSiblingRun) longestSiblingRun = run;
-            } else run = 1;
-          }
-        }
-        willChangeCount = document.querySelectorAll(
-          '[style*="will-change"],[style*="translateZ"],[style*="translate3d"]'
-        ).length;
-      } catch {
-        /* ignore */
       }
 
       const event: RuntimeStatsEvent = {
         seq: 0,
         kind: 'runtime-stats',
         timestamp: performance.now(),
-        consolePerSec: consoleCount / (SAMPLE_MS / 1000),
+        consolePerSec: 0, // console is intentionally not instrumented
         domElementCount: elementCount,
         domMaxDepth: maxDepth,
         longestSiblingRun,
@@ -172,14 +160,13 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
         hiFreqMovePerSec: moveCount / (SAMPLE_MS / 1000),
       };
       ctx.emit(event);
-      consoleCount = 0;
       scrollCount = 0;
       moveCount = 0;
     });
-    timer = window.setTimeout(sample, SAMPLE_MS);
+    timer = ctx.clock.setTimeout(sample, SAMPLE_MS);
   };
-  let timer = window.setTimeout(sample, SAMPLE_MS);
-  restorers.push(() => clearTimeout(timer));
+  timer = ctx.clock.setTimeout(sample, SAMPLE_MS);
+  restorers.push(() => ctx.clock.clearTimeout(timer));
 
   return () => {
     for (const r of restorers) {

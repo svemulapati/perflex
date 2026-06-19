@@ -108,11 +108,11 @@ export function setupFrameworkDetector(ctx: CollectorContext): () => void {
     });
 
   // Frameworks bootstrap after initial scripts run — sample a couple of times.
-  const t1 = window.setTimeout(emit, 1500);
-  const t2 = window.setTimeout(emit, 5000);
+  const t1 = ctx.clock.setTimeout(emit, 1500);
+  const t2 = ctx.clock.setTimeout(emit, 5000);
 
   return () => {
-    clearTimeout(t1);
-    clearTimeout(t2);
+    ctx.clock.clearTimeout(t1);
+    ctx.clock.clearTimeout(t2);
   };
 }

@@ -99,8 +99,8 @@ function start(): void {
   // IMPORTANT: wire up flushing + meta BEFORE the (optional) overlay, so a
   // failure constructing the overlay — e.g. innerHTML rejected by a page's
   // Trusted Types policy — can never stop events from reaching the panel.
-  const flushInterval = window.setInterval(flush, BATCH_FLUSH_INTERVAL);
-  const metaInterval = window.setInterval(() => {
+  const flushInterval = ctx.clock.setInterval(flush, BATCH_FLUSH_INTERVAL);
+  const metaInterval = ctx.clock.setInterval(() => {
     post({
       source: PERFLEX_MESSAGE_SOURCE,
       kind: 'meta',

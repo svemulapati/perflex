@@ -7,9 +7,32 @@ import { CircuitBreaker, type CollectorFeature } from './circuit-breaker';
  *  - error isolation (a crashing hook must never break the host page)
  *  - overhead measurement feeding the circuit breaker
  */
+export interface NativeClock {
+  setTimeout: typeof window.setTimeout;
+  clearTimeout: typeof window.clearTimeout;
+  setInterval: typeof window.setInterval;
+  clearInterval: typeof window.clearInterval;
+  requestAnimationFrame: typeof window.requestAnimationFrame;
+  cancelAnimationFrame: typeof window.cancelAnimationFrame;
+}
+
 export class CollectorContext {
   private seq = 0;
   readonly breaker: CircuitBreaker;
+
+  /**
+   * Native timer functions captured at construction — BEFORE the timer
+   * interceptor patches the globals. Collector modules must use this for their
+   * own scheduling so Perflex never instruments (or throttles) itself.
+   */
+  readonly clock: NativeClock = {
+    setTimeout: window.setTimeout.bind(window),
+    clearTimeout: window.clearTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    clearInterval: window.clearInterval.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  };
 
   constructor(
     private readonly sink: (event: CollectorEvent) => void,

@@ -32,10 +32,10 @@ export function setupMemoryMonitor(ctx: CollectorContext): () => void {
       };
       ctx.emit(event);
     });
-    timer = window.setTimeout(poll, MEMORY_POLL_INTERVAL);
+    timer = ctx.clock.setTimeout(poll, MEMORY_POLL_INTERVAL);
   };
   // First sample shortly after load, then on the interval.
-  timer = window.setTimeout(poll, 1000);
+  timer = ctx.clock.setTimeout(poll, 1000);
 
-  return () => clearTimeout(timer);
+  return () => ctx.clock.clearTimeout(timer);
 }

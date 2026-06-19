@@ -44,10 +44,10 @@ export function setupFrameBudgetTracker(ctx: CollectorContext): FrameTracker {
       }
     });
 
-    rafId = requestAnimationFrame(tick);
+    rafId = ctx.clock.requestAnimationFrame(tick);
   };
 
-  rafId = requestAnimationFrame(tick);
+  rafId = ctx.clock.requestAnimationFrame(tick);
 
   const getFps = () => {
     if (recent.length < 2) return 60;
@@ -65,7 +65,7 @@ export function setupFrameBudgetTracker(ctx: CollectorContext): FrameTracker {
   return {
     stop: () => {
       running = false;
-      cancelAnimationFrame(rafId);
+      ctx.clock.cancelAnimationFrame(rafId);
     },
     getFps,
     getFrameHealth,

@@ -1,6 +1,6 @@
 {
   "name": "perflex",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Real-time JavaScript performance profiling with function-level attribution and AI-powered remediation",
   "type": "module",
   "scripts": {
