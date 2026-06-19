@@ -50,7 +50,7 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 > Perflex is currently distributed as an unpacked extension (Chrome Web Store listing coming soon).
 
 ```bash
-git clone https://github.com/your-username/perflex.git
+git clone https://github.com/svemulapati/perflex.git
 cd perflex
 npm install
 npm run build      # → produces dist/
@@ -175,7 +175,7 @@ Contributions are very welcome — new anti-pattern detectors, remediation templ
 4. `npm run typecheck && npm test && npm run build`
 5. Open a PR
 
-Found a site where Perflex misbehaves or misses an issue? **[Open an issue](https://github.com/your-username/perflex/issues)** — real-world repro cases are gold.
+Found a site where Perflex misbehaves or misses an issue? **[Open an issue](https://github.com/svemulapati/perflex/issues)** — real-world repro cases are gold.
 
 ## 🗺️ Roadmap
 
