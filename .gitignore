@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Generated collector bundle (built by scripts/build-collector.mjs)
+public/perflex-collector.js
+
+.DS_Store
+*.log

@@ -1,0 +1,51 @@
+/** Tunable defaults for the collector and analyzer. */
+
+export const RING_BUFFER_CAPACITY = 10_000;
+
+/** How long the collector batches events before flushing to the worker (ms). */
+export const BATCH_FLUSH_INTERVAL = 100;
+
+/** Main-thread task above this (ms) counts as a "long task". */
+export const LONG_TASK_THRESHOLD = 50;
+
+/** 60fps frame budget (ms). */
+export const FRAME_BUDGET = 1000 / 60;
+
+/** Memory poll interval (ms). */
+export const MEMORY_POLL_INTERVAL = 10_000;
+
+/** Quiet window that ends an interaction session (ms). */
+export const INTERACTION_QUIET_WINDOW = 500;
+
+/** Circuit breaker: throttle when our own overhead exceeds this fraction of a frame. */
+export const OVERHEAD_THROTTLE_THRESHOLD = 0.02; // 2%
+export const OVERHEAD_DISABLE_THRESHOLD = 0.05; // 5%
+
+/** Time-series bucket width for sparklines (ms). */
+export const TIME_SERIES_BUCKET = 5_000;
+
+export const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#EF4444',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  success: '#10B981',
+  neutral: '#6B7280',
+};
+
+/** Health score weights (must sum to 1). */
+export const HEALTH_WEIGHTS = {
+  longTask: 0.3,
+  inp: 0.25,
+  cls: 0.15,
+  memory: 0.1,
+  network: 0.1,
+  frameDrop: 0.1,
+} as const;
+
+/** Core Web Vitals thresholds (good / needs-improvement boundaries). */
+export const CWV_THRESHOLDS = {
+  lcp: { good: 2500, poor: 4000 },
+  inp: { good: 200, poor: 500 },
+  cls: { good: 0.1, poor: 0.25 },
+  fcp: { good: 1800, poor: 3000 },
+} as const;
