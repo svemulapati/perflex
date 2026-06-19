@@ -17,6 +17,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   rendering: 'Rendering',
   network: 'Network',
   'third-party': 'Third-party',
+  framework: 'Framework',
 };
 
 export function FindingCard({ finding, onDismiss }: { finding: PerformanceFinding; onDismiss: () => void }) {

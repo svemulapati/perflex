@@ -7,7 +7,7 @@ type SortKey = 'impact' | 'severity' | 'category';
 
 const IMPACT_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 const SEVERITY_RANK: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
-const CATEGORIES: FindingCategory[] = ['loading', 'execution', 'rendering', 'network', 'third-party'];
+const CATEGORIES: FindingCategory[] = ['loading', 'execution', 'rendering', 'network', 'third-party', 'framework'];
 
 export function Findings() {
   const snapshot = useSessionStore((s) => s.snapshot);

@@ -38,6 +38,10 @@ export const PATTERN_META: Record<string, PatternMeta> = {
   'sequential-waterfall': { name: 'Sequential Waterfalls', category: 'network' },
   'uncompressed-payload': { name: 'Uncompressed Payloads', category: 'network' },
   'oversized-payload': { name: 'Oversized Payloads', category: 'network' },
+  // Framework
+  'dev-build-shipped': { name: 'Development Build in Production', category: 'framework' },
+  'multiple-ui-frameworks': { name: 'Multiple UI Frameworks', category: 'framework' },
+  'outdated-framework': { name: 'Outdated Framework Version', category: 'framework' },
   // Third-party
   'third-party-blocking-paint': { name: 'Third-Party Blocking First Paint', category: 'third-party' },
   'tag-manager-cascade': { name: 'Tag Manager Cascade', category: 'third-party' },

@@ -61,6 +61,7 @@ const snapshot: SessionSnapshot = {
   findings: [finding],
   interactions: [interaction],
   timeline: { start: 0, end: 2000, longTasks: [{ start: 1005, duration: 120, scriptUrl: 'https://example.com/app.js' }], network: [], layoutShifts: [], frames: [], memory: [], interactions: [] },
+  frameworks: [],
   fps: 58,
 };
 

@@ -20,6 +20,7 @@ function baseInput(over: Partial<AnalysisInput> = {}): AnalysisInput {
     jsonParses: [],
     domQueries: [],
     runtime: null,
+    frameworks: [],
     ...over,
   };
 }

@@ -43,7 +43,8 @@ export type EventKind =
   | 'interaction'
   | 'json-parse'
   | 'dom-query'
-  | 'runtime-stats';
+  | 'runtime-stats'
+  | 'framework';
 
 /** Base shape every captured event shares. */
 export interface BaseEvent {
@@ -227,6 +228,21 @@ export interface DomQueryEvent extends BaseEvent {
   resultCount: number;
 }
 
+export interface DetectedFramework {
+  name: string;
+  version?: string;
+  major?: number;
+  /** True when a non-production (development) build is detected. */
+  devBuild?: boolean;
+  /** A meta-framework (Next/Nuxt) rather than a UI library. */
+  meta?: boolean;
+}
+
+export interface FrameworkEvent extends BaseEvent {
+  kind: 'framework';
+  frameworks: DetectedFramework[];
+}
+
 /** Periodic snapshot of page-wide runtime stats (sampled, low frequency). */
 export interface RuntimeStatsEvent extends BaseEvent {
   kind: 'runtime-stats';
@@ -259,7 +275,8 @@ export type CollectorEvent =
   | InteractionTriggerEvent
   | JsonParseEvent
   | DomQueryEvent
-  | RuntimeStatsEvent;
+  | RuntimeStatsEvent
+  | FrameworkEvent;
 
 /** Trigger that opened an interaction session. */
 export interface InteractionTrigger {
@@ -391,7 +408,8 @@ export type FindingCategory =
   | 'execution'
   | 'rendering'
   | 'network'
-  | 'third-party';
+  | 'third-party'
+  | 'framework';
 
 export type Severity = 'critical' | 'warning' | 'info';
 
@@ -462,6 +480,7 @@ export interface SessionSnapshot {
   findings: PerformanceFinding[];
   interactions: InteractionSession[];
   timeline: TimelineData;
+  frameworks: DetectedFramework[];
   fps: number;
 }
 
@@ -489,6 +508,7 @@ export interface AnalysisInput {
   jsonParses: JsonParseEvent[];
   domQueries: DomQueryEvent[];
   runtime: RuntimeStatsEvent | null;
+  frameworks: DetectedFramework[];
 }
 
 /* ---- Messaging envelopes ---- */

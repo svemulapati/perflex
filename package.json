@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npm run build:collector && vite",
     "build:collector": "node scripts/build-collector.mjs",
-    "build": "tsc -b && npm run build:collector && vite build",
+    "build:viewer": "node scripts/build-viewer.mjs",
+    "build": "tsc -b && npm run build:collector && npm run build:viewer && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -16,6 +16,7 @@ import { setupFrameBudgetTracker } from './frame-budget-tracker';
 import { setupMemoryMonitor } from './memory-monitor';
 import { setupInteractionTracker } from './interaction-tracker';
 import { setupRuntimeHooks } from './runtime-hooks';
+import { setupFrameworkDetector } from './framework-detector';
 import { setupOverlay } from '../overlay/overlay';
 
 export const PERFLEX_MESSAGE_SOURCE = 'perflex-collector';
@@ -89,33 +90,14 @@ function start(): void {
   safeSetup('interaction', () => setupInteractionTracker(ctx));
   safeSetup('memory', () => setupMemoryMonitor(ctx));
   safeSetup('runtime-hooks', () => setupRuntimeHooks(ctx));
+  safeSetup('framework-detector', () => setupFrameworkDetector(ctx));
 
   const frameTracker = setupFrameBudgetTracker(ctx);
   teardown.push(frameTracker.stop);
 
-  // In-page overlay (Shadow DOM). Hidden until toggled via Ctrl+Shift+X, which
-  // the background relays to the isolated bridge → window 'perflex-control'.
-  const overlay = setupOverlay(() => {
-    const now = performance.now();
-    while (liveStats.reqTimes.length && liveStats.reqTimes[0] < now - 1000) liveStats.reqTimes.shift();
-    return {
-      fps: frameTracker.getFps(),
-      frameHealth: frameTracker.getFrameHealth(),
-      throttle: breaker.throttleLevel,
-      heapMB: liveStats.heapMB,
-      longTasks: liveStats.longTasks,
-      activeRequests: liveStats.reqTimes.length,
-    };
-  });
-  teardown.push(overlay.destroy);
-
-  window.addEventListener('message', (e: MessageEvent) => {
-    if (e.source !== window) return;
-    const data = e.data as { source?: string; action?: string } | undefined;
-    if (data?.source === 'perflex-control' && data.action === 'toggle-overlay') overlay.toggle();
-  });
-
-  // Periodic flush + live meta (fps / frame health) for the overlay & popup.
+  // IMPORTANT: wire up flushing + meta BEFORE the (optional) overlay, so a
+  // failure constructing the overlay — e.g. innerHTML rejected by a page's
+  // Trusted Types policy — can never stop events from reaching the panel.
   const flushInterval = window.setInterval(flush, BATCH_FLUSH_INTERVAL);
   const metaInterval = window.setInterval(() => {
     post({
@@ -130,6 +112,30 @@ function start(): void {
   window.addEventListener('pagehide', flush);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flush();
+  });
+
+  // In-page overlay (Shadow DOM). Hidden until toggled via Ctrl+Shift+X, which
+  // the background relays to the isolated bridge → window 'perflex-control'.
+  // Wrapped so a Trusted-Types / DOM failure here never disturbs collection.
+  safeSetup('overlay', () => {
+    const overlay = setupOverlay(() => {
+      const now = performance.now();
+      while (liveStats.reqTimes.length && liveStats.reqTimes[0] < now - 1000) liveStats.reqTimes.shift();
+      return {
+        fps: frameTracker.getFps(),
+        frameHealth: frameTracker.getFrameHealth(),
+        throttle: breaker.throttleLevel,
+        heapMB: liveStats.heapMB,
+        longTasks: liveStats.longTasks,
+        activeRequests: liveStats.reqTimes.length,
+      };
+    });
+    window.addEventListener('message', (e: MessageEvent) => {
+      if (e.source !== window) return;
+      const data = e.data as { source?: string; action?: string } | undefined;
+      if (data?.source === 'perflex-control' && data.action === 'toggle-overlay') overlay.toggle();
+    });
+    return overlay.destroy;
   });
 
   void teardown;

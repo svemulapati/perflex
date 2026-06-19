@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
-import { toJSON, toHAR, toOTLP, buildReportHTML } from '@/shared/export';
-import { downloadFile, openReport, timestampedName } from '../export-actions';
+import { toJSON, toHAR, toOTLP, buildReportHTML, buildSharePayload, encodeSession, buildPermalink } from '@/shared/export';
+import { downloadFile, openReport, timestampedName, buildShareableHTML, copyToClipboard } from '../export-actions';
 
 export function Settings() {
   const settings = useSettingsStore();
@@ -15,6 +15,7 @@ export function Settings() {
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   const runExport = async (format: 'json' | 'har' | 'otel' | 'pdf') => {
     setExporting(format);
@@ -25,6 +26,40 @@ export function Settings() {
       else if (format === 'har') downloadFile(timestampedName('session', 'har'), toHAR(bundle), 'application/json');
       else if (format === 'otel') downloadFile(timestampedName('traces', 'otlp.json'), toOTLP(bundle), 'application/json');
       else if (format === 'pdf') openReport(buildReportHTML(bundle));
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const copyPermalink = async () => {
+    setExporting('permalink');
+    setShareMsg(null);
+    try {
+      const bundle = await requestExport();
+      if (!bundle) return;
+      const encoded = await encodeSession(buildSharePayload(bundle));
+      const link = buildPermalink(encoded, settings.viewerBaseUrl);
+      await copyToClipboard(link);
+      const kb = (link.length / 1024).toFixed(1);
+      setShareMsg(
+        link.length > 30_000
+          ? `Permalink copied (${kb} KB) — quite long; the shareable HTML may be easier to send.`
+          : `Permalink copied to clipboard (${kb} KB).`
+      );
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const downloadShareHtml = async () => {
+    setExporting('share-html');
+    setShareMsg(null);
+    try {
+      const bundle = await requestExport();
+      if (!bundle) return;
+      const html = await buildShareableHTML(buildSharePayload(bundle));
+      downloadFile(timestampedName('shared', 'html'), html, 'text/html');
+      setShareMsg('Self-contained HTML downloaded — open it in any browser, no extension needed.');
     } finally {
       setExporting(null);
     }
@@ -133,6 +168,39 @@ export function Settings() {
         <button onClick={clear} className="self-start rounded bg-zinc-800 px-2 py-1 text-[11px]">
           Clear current session
         </button>
+      </Section>
+
+      <Section title="Share">
+        <p className="text-[11px] text-zinc-400">
+          Create a shareable, read-only snapshot of this session. The data is encoded entirely
+          client-side — a permalink keeps it in the URL fragment (never uploaded), and the HTML file
+          works fully offline.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={copyPermalink}
+            disabled={exporting !== null}
+            className="rounded bg-brand px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {exporting === 'permalink' ? 'Encoding…' : 'Copy permalink'}
+          </button>
+          <button
+            onClick={downloadShareHtml}
+            disabled={exporting !== null}
+            className="rounded bg-zinc-800 px-2 py-1 text-[11px] hover:bg-zinc-700 disabled:opacity-50"
+          >
+            {exporting === 'share-html' ? 'Building…' : 'Download shareable HTML'}
+          </button>
+        </div>
+        <label className="flex flex-col gap-1 text-[11px] text-zinc-400">
+          Viewer URL (for permalinks)
+          <input
+            value={settings.viewerBaseUrl}
+            onChange={(e) => settings.update({ viewerBaseUrl: e.target.value })}
+            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-[11px] outline-none focus:border-brand"
+          />
+        </label>
+        {shareMsg && <div className="text-[10px] text-severity-success">{shareMsg}</div>}
       </Section>
 
       <Section title="Export">

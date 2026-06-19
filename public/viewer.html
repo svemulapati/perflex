@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Perflex — Shared Session</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #09090b; color: #e4e4e7; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .logo { width: 26px; height: 26px; border-radius: 6px; background: #6366F1; color: #fff; font-weight: 800; display: grid; place-items: center; }
+  h1 { font-size: 18px; margin: 0; }
+  .url { color: #818cf8; font-size: 12px; word-break: break-all; margin-bottom: 2px; }
+  .meta { color: #71717a; font-size: 11px; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #71717a; margin: 24px 0 8px; }
+  .score { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
+  .badge { font-size: 40px; font-weight: 800; }
+  .vitals { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid #27272a; background: #18181b; border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+  .chip b { display: block; font-size: 16px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .fw { display: inline-block; background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 3px 8px; font-size: 11px; margin: 0 4px 4px 0; }
+  .fw.dev { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4); color: #fca5a5; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #1f1f23; }
+  th { color: #71717a; font-weight: 600; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .finding { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1f1f23; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
+  .ftitle { font-weight: 600; font-size: 13px; }
+  .sev { font-size: 9px; text-transform: uppercase; color: #71717a; margin-left: 4px; }
+  .fdesc { font-size: 12px; color: #a1a1aa; margin-top: 2px; }
+  .fix { font-size: 12px; color: #34d399; margin-top: 4px; }
+  pre { background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 8px; overflow: auto; font-size: 11px; }
+  .empty { color: #71717a; font-size: 13px; text-align: center; padding: 60px 0; }
+  footer { margin-top: 40px; color: #52525b; font-size: 11px; text-align: center; }
+  a { color: #818cf8; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="empty">Loading shared session…</div></div>
+
+<script>
+(function () {
+  var SEV = { critical: '#EF4444', warning: '#F59E0B', info: '#3B82F6' };
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function ms(n){ if(n==null) return '—'; return n>=1000 ? (n/1000).toFixed(2)+'s' : Math.round(n)+'ms'; }
+  function kb(n){ return (n/1024).toFixed(1)+' KB'; }
+  function grade(s){ return s>=90?'A':s>=80?'B':s>=70?'C':s>=60?'D':'F'; }
+  function scoreColor(s){ return s>=80?'#10B981':s>=60?'#F59E0B':'#EF4444'; }
+
+  function b64urlToBytes(str){
+    var b = str.replace(/-/g,'+').replace(/_/g,'/');
+    while (b.length % 4) b += '=';
+    var bin = atob(b), out = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+    return out;
+  }
+  async function gunzip(bytes){
+    var ds = new DecompressionStream('gzip');
+    var w = ds.writable.getWriter(); w.write(bytes); w.close();
+    var buf = await new Response(ds.readable).arrayBuffer();
+    return new Uint8Array(buf);
+  }
+  async function decode(encoded){
+    var tag = encoded[0], bytes = b64urlToBytes(encoded.slice(1));
+    var jsonBytes = tag === 'g' ? await gunzip(bytes) : bytes;
+    return JSON.parse(new TextDecoder().decode(jsonBytes));
+  }
+
+  function render(d){
+    var app = document.getElementById('app');
+    var fwHtml = (d.frameworks||[]).map(function(f){
+      return '<span class="fw'+(f.devBuild?' dev':'')+'">'+esc(f.name)+(f.version?(' '+esc(f.version)):'')+(f.devBuild?' · DEV':'')+'</span>';
+    }).join('');
+    var findingsHtml = (d.findings||[]).slice(0,40).map(function(f){
+      var rem = f.remediation;
+      var code = rem && rem.codeExample ? '<pre>'+esc('// before\n'+rem.codeExample.before+'\n// after\n'+rem.codeExample.after)+'</pre>' : '';
+      return '<div class="finding"><span class="dot" style="background:'+(SEV[f.severity]||'#888')+'"></span><div>'
+        + '<div class="ftitle">'+esc(f.patternName)+'<span class="sev">'+esc(f.severity)+' · '+esc(f.category)+'</span></div>'
+        + '<div class="fdesc">'+esc(f.description)+'</div>'
+        + (rem ? '<div class="fix">Fix ('+esc(rem.riskLevel)+'): '+esc(rem.summary)+'</div>'+code : '')
+        + '</div></div>';
+    }).join('');
+    var scriptsHtml = (d.scripts||[]).map(function(s){
+      return '<tr><td>'+esc(s.url)+'</td><td>'+esc(s.classification)+'</td><td class="n">'+ms(s.mainThreadTime)+'</td><td class="n">'+s.longTaskCount+'</td><td class="n">'+kb(s.transferSize)+'</td></tr>';
+    }).join('');
+    var v = d.vitals || {};
+
+    app.innerHTML =
+      '<header><div class="logo">P</div><h1>Perflex — Shared Session</h1></header>'
+      + '<div class="url">'+esc(d.url||'')+'</div>'
+      + '<div class="meta">Captured '+new Date(d.generatedAt||Date.now()).toLocaleString()+(d.interactionCount?(' · '+d.interactionCount+' interactions'):'')+'</div>'
+      + '<div class="score"><div class="badge" style="color:'+scoreColor(d.healthScore)+'">'+d.healthScore+' · '+grade(d.healthScore)+'</div>'
+      + '<div class="vitals">'
+      + '<div class="chip">LCP<b>'+ms(v.lcp)+'</b></div>'
+      + '<div class="chip">INP<b>'+ms(v.inp)+'</b></div>'
+      + '<div class="chip">CLS<b>'+(v.cls!=null?v.cls.toFixed(3):'—')+'</b></div>'
+      + '<div class="chip">TBT<b>'+ms(d.totalBlockingTime)+'</b></div>'
+      + '<div class="chip">Heap<b>'+(d.heapSize?(d.heapSize/1048576).toFixed(1)+' MB':'—')+'</b></div>'
+      + '</div></div>'
+      + (fwHtml ? '<h2>Frameworks</h2>'+fwHtml : '')
+      + '<h2>Findings ('+(d.findings?d.findings.length:0)+')</h2>'+(findingsHtml||'<div class="fdesc">No findings.</div>')
+      + '<h2>Scripts</h2><table><thead><tr><th>Script</th><th>Class</th><th class="n">Main-thread</th><th class="n">Tasks</th><th class="n">Transfer</th></tr></thead><tbody>'+(scriptsHtml||'')+'</tbody></table>'
+      + '<footer>Generated by <a href="https://github.com/svemulapati/perflex">Perflex</a> · data is decoded entirely in your browser — nothing was uploaded.</footer>';
+  }
+
+  function fail(msg){
+    document.getElementById('app').innerHTML = '<div class="empty">'+esc(msg)+'</div>';
+  }
+
+  async function boot(){
+    try {
+      if (window.__PERFLEX_DATA__) { render(window.__PERFLEX_DATA__); return; }
+      var hash = location.hash || '';
+      var m = hash.match(/[#&]s=([^&]+)/);
+      if (!m) { fail('No shared session found in this link.'); return; }
+      render(await decode(decodeURIComponent(m[1])));
+    } catch (e) {
+      fail('Could not decode this shared session link.');
+    }
+  }
+  boot();
+  window.addEventListener('hashchange', boot);
+})();
+</script>
+</body>
+</html>

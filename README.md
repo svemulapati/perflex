@@ -37,12 +37,14 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 - 🏆 **Script Leaderboard** — every script ranked by main-thread time, long tasks, transfer size, layout-shift contribution, and memory growth. Sortable, filterable (first-party vs third-party), expandable to per-function hotspots.
 - 📊 **Core Web Vitals, live** — **LCP, INP, CLS**, TBT, FPS, JS heap, and a composite **0–100 health score** with an A–F grade.
 - ⏱️ **Interaction timeline** — a zoomable, pannable **flame-chart-style timeline** (lanes for interactions, long tasks, network waterfall, layout shifts, frame drops, and memory) built on D3. Click any interaction to see its **causal chain**: `click → long task → fetch → DOM mutation → reflow → layout shift`.
-- 🩺 **30 anti-pattern detectors** across Loading, Execution, Rendering, Network, and Third-party — layout thrashing, render-blocking scripts, synchronous XHR, redundant fetches, oversized/uncompressed payloads, unbounded list rendering, excessive DOM size, timer flooding, third-party main-thread domination, and more.
+- 🩺 **33 anti-pattern detectors** across Loading, Execution, Rendering, Network, Third-party, and **Framework** — layout thrashing, render-blocking scripts, synchronous XHR, redundant fetches, oversized/uncompressed payloads, unbounded list rendering, excessive DOM size, timer flooding, third-party main-thread domination, and more.
+- ⚛️ **Framework-aware** — detects React, Vue, Angular, Next.js, Nuxt, Preact, and jQuery, and flags the costly mistakes: a **development build shipped to production** (reliably detected for React via the DevTools `bundleType`), **multiple UI frameworks** loaded on one page, and **outdated major versions**.
 - 🛠️ **Business-safe remediation** — every finding ships with a fix: a one-line summary, before/after code diff, **risk level** (safe / verify / review), validation steps, and an explicit business-safety note.
 - 🤖 **AI remediation (opt-in)** — bring your own **Claude API key** for contextual, code-specific fixes. Only a sanitized summary (filename + function + metrics) is ever sent — never URLs with tokens, request bodies, or page content.
 - 🪶 **Near-zero overhead** — a self-monitoring **circuit breaker** measures Perflex's own cost and automatically throttles if it ever exceeds 2% of the frame budget.
 - 🧩 **In-page overlay** — a draggable, Shadow-DOM-isolated HUD (`Ctrl+Shift+X`) showing live FPS, heap, long tasks, and throttle state on any page.
 - 📤 **Export everything** — **JSON**, **HAR** (extended with a `_perflex` namespace), **OpenTelemetry/OTLP traces** (for Jaeger / Tempo / Datadog), and a printable **PDF report**. Plus "Copy as Markdown / JSON" for any finding (drop straight into a Jira / GitHub issue).
+- 🔗 **Shareable permalinks** — share a read-only snapshot of a session as a **permalink** (the whole session is gzip-compressed into the URL fragment — never uploaded) or as a **self-contained HTML file** that opens offline with no extension or server.
 - 🔒 **100% local & private** — no servers, no telemetry, no account.
 
 ## 🚀 Install in 60 seconds
@@ -76,13 +78,20 @@ Works in **Chrome, Edge, Brave, Arc**, and other Chromium browsers. *(On Arc, th
 
 > Press **`Ctrl+Shift+X`** on any page to toggle the live in-page overlay.
 
+### 🔗 Sharing a session
+
+In **Settings → Share** you can:
+
+- **Copy permalink** — encodes the session into a URL fragment pointing at a static viewer. The fragment is decoded entirely in the recipient's browser; **nothing is ever uploaded**. The viewer ships in this repo at `docs/` — enable **GitHub Pages → Deploy from branch → `/docs`** and set the *Viewer URL* in Settings to your Pages URL (default `https://svemulapati.github.io/perflex/`).
+- **Download shareable HTML** — a single self-contained `.html` file with the session inlined; it opens in any browser fully offline, no extension or server required. Great for attaching to a ticket.
+
 ## 🆚 Perflex vs the alternatives
 
 | | **Perflex** | Lighthouse | DevTools Perf panel | Sentry / Datadog RUM |
 |---|:---:|:---:|:---:|:---:|
 | Runs live in the browser | ✅ | ⚠️ lab run | ✅ | ✅ |
 | Function-level attribution | ✅ | ❌ | ⚠️ manual | ❌ |
-| 30 automatic anti-pattern detectors | ✅ | ⚠️ subset | ❌ | ⚠️ subset |
+| 33 automatic anti-pattern detectors | ✅ | ⚠️ subset | ❌ | ⚠️ subset |
 | Concrete before/after fix + risk level | ✅ | ⚠️ generic | ❌ | ❌ |
 | AI-generated contextual remediation | ✅ | ❌ | ❌ | ⚠️ paid |
 | Interaction causal chains | ✅ | ❌ | ⚠️ manual | ⚠️ |
@@ -183,8 +192,8 @@ Found a site where Perflex misbehaves or misses an issue? **[Open an issue](http
 - [ ] DevTools panel integration
 - [ ] Firefox / Safari support
 - [ ] Coverage-API-backed unused-JS detection
-- [ ] Shareable session permalinks
-- [ ] More framework-aware detectors (React/Vue/Angular)
+- [x] Shareable session permalinks (URL-fragment encoded + offline HTML)
+- [x] Framework-aware detectors (React/Vue/Angular/Next/Nuxt/jQuery)
 
 ## 📄 License
 

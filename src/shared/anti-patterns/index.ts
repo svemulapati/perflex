@@ -4,6 +4,7 @@ import { executionMatchers } from './execution';
 import { renderingMatchers } from './rendering';
 import { networkMatchers } from './network';
 import { thirdPartyMatchers } from './third-party';
+import { frameworkMatchers } from './framework';
 
 export { PATTERN_META } from './base';
 
@@ -15,7 +16,14 @@ const IMPACT_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
  * findings. Each matcher is isolated so one throwing can't suppress the rest.
  */
 export function analyze(input: AnalysisInput): PerformanceFinding[] {
-  const matchers = [loadingMatchers, executionMatchers, renderingMatchers, networkMatchers, thirdPartyMatchers];
+  const matchers = [
+    loadingMatchers,
+    executionMatchers,
+    renderingMatchers,
+    networkMatchers,
+    thirdPartyMatchers,
+    frameworkMatchers,
+  ];
   const findings: PerformanceFinding[] = [];
   for (const matcher of matchers) {
     try {

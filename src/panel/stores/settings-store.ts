@@ -5,6 +5,8 @@ export interface PerflexSettings {
   aiModel: string;
   firstPartyDomains: string[];
   aiEnabled: boolean;
+  /** Base URL of the static viewer used for shareable permalinks. */
+  viewerBaseUrl: string;
 }
 
 const DEFAULTS: PerflexSettings = {
@@ -12,6 +14,7 @@ const DEFAULTS: PerflexSettings = {
   aiModel: 'claude-sonnet-4-6',
   firstPartyDomains: [],
   aiEnabled: true,
+  viewerBaseUrl: 'https://svemulapati.github.io/perflex/',
 };
 
 const STORAGE_KEY = 'perflex:settings';
@@ -50,6 +53,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       aiModel: patch.aiModel ?? get().aiModel,
       firstPartyDomains: patch.firstPartyDomains ?? get().firstPartyDomains,
       aiEnabled: patch.aiEnabled ?? get().aiEnabled,
+      viewerBaseUrl: patch.viewerBaseUrl ?? get().viewerBaseUrl,
     };
     set(next);
     await persist(next);

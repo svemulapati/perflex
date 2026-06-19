@@ -38,3 +38,16 @@ export function timestampedName(base: string, ext: string): string {
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   return `perflex-${base}-${ts}.${ext}`;
 }
+
+/**
+ * Build a fully self-contained shareable HTML file: the packaged viewer with the
+ * session inlined as `window.__PERFLEX_DATA__`. Opens offline, no extension/server.
+ */
+export async function buildShareableHTML(payload: unknown): Promise<string> {
+  const res = await fetch(chrome.runtime.getURL('viewer.html'));
+  const template = await res.text();
+  // Escape `<` so the JSON can't terminate the <script> early.
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  const inject = `<script>window.__PERFLEX_DATA__=${json};</script>`;
+  return template.replace('</head>', `${inject}\n</head>`);
+}

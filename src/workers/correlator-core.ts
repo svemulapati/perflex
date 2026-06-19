@@ -11,6 +11,7 @@ import type {
   CausalStep,
   CollectorEvent,
   CoreWebVitals,
+  DetectedFramework,
   DomQueryEvent,
   ExportBundle,
   FunctionProfile,
@@ -144,6 +145,7 @@ export class Correlator {
   private rafLongCount = 0;
   private syncXhrCount = 0;
   private latestRuntime: RuntimeStatsEvent | null = null;
+  private frameworks: DetectedFramework[] = [];
 
   // Timeline lanes.
   private tlLongTasks: TimelineData['longTasks'] = [];
@@ -476,6 +478,12 @@ export class Correlator {
         this.latestRuntime = event;
         break;
       }
+
+      case 'framework': {
+        // Keep the richest detection seen (later scans pick up late-booting apps).
+        if (event.frameworks.length >= this.frameworks.length) this.frameworks = event.frameworks;
+        break;
+      }
     }
   }
 
@@ -614,6 +622,7 @@ export class Correlator {
       jsonParses: this.jsonParses,
       domQueries: this.domQueries,
       runtime: this.latestRuntime,
+      frameworks: this.frameworks,
     };
   }
 
@@ -643,6 +652,7 @@ export class Correlator {
       findings,
       interactions,
       timeline,
+      frameworks: this.frameworks,
       fps: this.fps,
     };
   }
@@ -685,6 +695,7 @@ export class Correlator {
     this.rafLongCount = 0;
     this.syncXhrCount = 0;
     this.latestRuntime = null;
+    this.frameworks = [];
   }
 }
 

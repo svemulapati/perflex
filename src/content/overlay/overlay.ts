@@ -73,7 +73,28 @@ export function setupOverlay(getStats: () => OverlayStats): OverlayHandle {
 
   const root = document.createElement('div');
   root.className = 'root';
-  root.innerHTML = `
+  // Trusted-Types-safe HTML setter: pages like Google's enforce
+  // `require-trusted-types-for 'script'`, which makes a raw `innerHTML =` throw.
+  // Use a dedicated policy when available; otherwise fall back to direct assign.
+  const setHTML = (() => {
+    try {
+      const tt = (window as unknown as { trustedTypes?: { createPolicy: (n: string, r: unknown) => { createHTML: (s: string) => unknown } } }).trustedTypes;
+      if (tt?.createPolicy) {
+        const policy = tt.createPolicy('perflex-overlay', { createHTML: (s: string) => s });
+        return (el: Element, html: string) => {
+          (el as { innerHTML: unknown }).innerHTML = policy.createHTML(html);
+        };
+      }
+    } catch {
+      /* policy name not allowed by page CSP — fall through */
+    }
+    return (el: Element, html: string) => {
+      el.innerHTML = html;
+    };
+  })();
+  setHTML(
+    root,
+    `
     <div class="pill"><span class="dot"></span><span class="fps">–</span> fps</div>
     <div class="panel hidden">
       <div class="head"><span class="brand">Perflex</span><span class="close">✕</span></div>
@@ -84,7 +105,8 @@ export function setupOverlay(getStats: () => OverlayStats): OverlayHandle {
       <div class="row"><span class="k">Long tasks</span><span class="v lt">–</span></div>
       <div class="row"><span class="k">Req (1s)</span><span class="v req">–</span></div>
       <div class="row throttle" style="display:none"><span class="k warn">Throttled</span><span class="v thr"></span></div>
-    </div>`;
+    </div>`
+  );
   shadow.appendChild(root);
 
   const pill = root.querySelector('.pill') as HTMLElement;

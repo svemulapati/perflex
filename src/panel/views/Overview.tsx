@@ -47,6 +47,31 @@ export function Overview() {
         </div>
       </div>
 
+      {snapshot.frameworks.length > 0 && (
+        <section>
+          <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            Detected Frameworks
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {snapshot.frameworks.map((f) => (
+              <span
+                key={f.name}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                  f.devBuild
+                    ? 'bg-severity-critical/20 text-severity-critical'
+                    : 'bg-zinc-800 text-zinc-300'
+                }`}
+                title={f.devBuild ? 'Development build detected' : undefined}
+              >
+                {f.name}
+                {f.version ? ` ${f.version}` : ''}
+                {f.devBuild ? ' · DEV' : ''}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section>
         <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
           Core Web Vitals

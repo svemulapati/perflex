@@ -454,6 +454,67 @@ export const REMEDIATIONS: Record<string, RemediationPlan> = {
     relatedResources: [{ title: 'Reduce network payloads', url: 'https://web.dev/articles/total-byte-weight' }],
   }),
 
+  'dev-build-shipped': r({
+    summary: 'Ship the production build of your framework',
+    detailed:
+      'Development builds (React/Vue/etc.) include extra warnings, prop-type checks, and dev-only code paths that can be 3–10× slower than production. Ensure your bundler builds in production mode.',
+    codeExample: {
+      language: 'bash',
+      before: '# NODE_ENV not set to production at build time',
+      after: 'NODE_ENV=production npm run build   # Vite: vite build · webpack: mode: "production"',
+    },
+    riskLevel: 'verify',
+    riskExplanation:
+      'Production builds strip dev warnings and minify. Verify your app still works without dev-only checks (it should).',
+    estimatedImpact: 'Often a multiple-x reduction in framework runtime cost',
+    validationSteps: [
+      'Confirm the bundle URL no longer references *.development.js',
+      'Check that React DevTools shows the "production" build',
+      'Re-measure long tasks / INP',
+    ],
+    businessSafetyNote:
+      'No behavioral change — production builds run the same logic, just without dev-only diagnostics.',
+    relatedResources: [
+      { title: 'React: Optimizing performance (production build)', url: 'https://react.dev/learn/react-developer-tools' },
+      { title: 'Vue: Production deployment', url: 'https://vuejs.org/guide/best-practices/production-deployment.html' },
+    ],
+  }),
+
+  'multiple-ui-frameworks': r({
+    summary: 'Consolidate onto a single UI framework',
+    detailed:
+      'Loading more than one UI framework (e.g. React + Vue, or jQuery alongside a modern framework) ships multiple runtimes and duplicates work. Migrate widgets onto one framework, or isolate legacy ones.',
+    codeExample: {
+      language: 'text',
+      before: 'React + jQuery + a Vue widget all loaded on one page',
+      after: 'Port the jQuery/Vue widgets to the primary framework, or load them only where used',
+    },
+    riskLevel: 'review',
+    riskExplanation:
+      'Migrating components between frameworks is a real refactor — scope it per widget and test each.',
+    estimatedImpact: 'Removes an entire framework runtime (tens to hundreds of KB + its execution)',
+    validationSteps: ['Inventory which framework powers which UI', 'Migrate or lazy-load the secondary one', 'Regression-test the affected widgets'],
+    businessSafetyNote: 'Behavior must be preserved per widget — migrate incrementally and verify each before removing the old runtime.',
+    relatedResources: [{ title: 'Reduce JavaScript payloads', url: 'https://web.dev/articles/reduce-javascript-payloads-with-code-splitting' }],
+  }),
+
+  'outdated-framework': r({
+    summary: 'Upgrade to a current major version',
+    detailed:
+      'Older framework majors miss performance features (e.g. React 18 automatic batching & concurrent rendering, Vue 3 reactivity, modern Angular rendering). Upgrading typically improves responsiveness with little app change.',
+    codeExample: {
+      language: 'bash',
+      before: '# e.g. react@17',
+      after: 'npm install react@latest react-dom@latest   # follow the official migration guide',
+    },
+    riskLevel: 'review',
+    riskExplanation: 'Major upgrades can include breaking changes — follow the framework migration guide and test.',
+    estimatedImpact: 'Access to newer rendering/batching optimizations',
+    validationSteps: ['Read the migration guide', 'Upgrade in a branch', 'Run the full test suite + smoke test'],
+    businessSafetyNote: 'Upgrades may change APIs — verify behavior against the migration guide before shipping.',
+    relatedResources: [{ title: 'React upgrade guide', url: 'https://react.dev/blog' }],
+  }),
+
   'third-party-blocking-paint': r({
     summary: 'Load blocking third-party scripts async/deferred',
     detailed:
