@@ -10,6 +10,8 @@ export interface PatternMeta {
 export const PATTERN_META: Record<string, PatternMeta> = {
   // Loading
   'render-blocking-script': { name: 'Render-Blocking Script', category: 'loading' },
+  'render-blocking-stylesheet': { name: 'Render-Blocking Stylesheet', category: 'loading' },
+  'document-write': { name: 'document.write Usage', category: 'loading' },
   'unused-javascript': { name: 'Unused JavaScript', category: 'loading' },
   'chain-loaded-dependencies': { name: 'Chain-Loaded Dependencies', category: 'loading' },
   'duplicate-libraries': { name: 'Duplicate Libraries', category: 'loading' },
@@ -18,6 +20,7 @@ export const PATTERN_META: Record<string, PatternMeta> = {
   // Execution
   'layout-thrashing': { name: 'Layout Thrashing', category: 'execution' },
   'long-main-thread-task': { name: 'Long Main-Thread Task', category: 'execution' },
+  'suspected-memory-leak': { name: 'Suspected Memory Leak', category: 'execution' },
   'unthrottled-listeners': { name: 'Unthrottled Event Listeners', category: 'execution' },
   'synchronous-xhr': { name: 'Synchronous XHR', category: 'execution' },
   'large-json-parse': { name: 'Large Main-Thread JSON Parsing', category: 'execution' },
@@ -38,6 +41,7 @@ export const PATTERN_META: Record<string, PatternMeta> = {
   'sequential-waterfall': { name: 'Sequential Waterfalls', category: 'network' },
   'uncompressed-payload': { name: 'Uncompressed Payloads', category: 'network' },
   'oversized-payload': { name: 'Oversized Payloads', category: 'network' },
+  'oversized-images': { name: 'Oversized Images', category: 'network' },
   // Framework
   'dev-build-shipped': { name: 'Development Build in Production', category: 'framework' },
   'multiple-ui-frameworks': { name: 'Multiple UI Frameworks', category: 'framework' },

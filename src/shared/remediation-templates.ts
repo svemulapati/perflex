@@ -29,6 +29,40 @@ export const REMEDIATIONS: Record<string, RemediationPlan> = {
     ],
   }),
 
+  'render-blocking-stylesheet': r({
+    summary: 'Inline critical CSS and defer the rest',
+    detailed:
+      'Stylesheets in the document head block rendering until downloaded and parsed. Inline the small amount of CSS needed for above-the-fold content and load the rest non-blockingly.',
+    codeExample: {
+      language: 'html',
+      before: '<link rel="stylesheet" href="/styles.css">',
+      after: '<style>/* critical above-the-fold CSS */</style>\n<link rel="stylesheet" href="/styles.css" media="print" onload="this.media=\'all\'">',
+    },
+    riskLevel: 'verify',
+    riskExplanation: 'Splitting critical vs. deferred CSS can cause a flash of unstyled content if the critical set is incomplete.',
+    estimatedImpact: 'Removes stylesheet round-trips from the render path (often 100–300ms FCP)',
+    validationSteps: ['Identify render-blocking stylesheets', 'Extract critical CSS', 'Defer the remainder', 'Re-check FCP/LCP for FOUC'],
+    businessSafetyNote: 'Visual output is unchanged once all CSS loads; verify no flash of unstyled content during load.',
+    relatedResources: [{ title: 'Defer non-critical CSS', url: 'https://web.dev/articles/defer-non-critical-css' }],
+  }),
+
+  'document-write': r({
+    summary: 'Replace document.write with DOM APIs or async loading',
+    detailed:
+      'document.write blocks the HTML parser, and any call after the document finishes loading wipes the entire page. Build nodes with DOM methods, or load scripts asynchronously.',
+    codeExample: {
+      language: 'javascript',
+      before: 'document.write(\'<script src="/widget.js"></scr\' + \'ipt>\');',
+      after: 'const s = document.createElement("script");\ns.src = "/widget.js"; s.async = true;\ndocument.head.appendChild(s);',
+    },
+    riskLevel: 'review',
+    riskExplanation: 'Async loading changes execution timing; verify code depending on the injected content waits for it.',
+    estimatedImpact: 'Unblocks the parser; avoids catastrophic full-document rewrites',
+    validationSteps: ['Find document.write call sites', 'Replace with DOM insertion / async script', 'Verify the injected content still appears and initializes'],
+    businessSafetyNote: 'Same content is added to the page; only the insertion mechanism and timing change — verify dependent code.',
+    relatedResources: [{ title: 'Avoid document.write()', url: 'https://web.dev/articles/no-document-write' }],
+  }),
+
   'unused-javascript': r({
     summary: 'Code-split and lazy-load rarely-used JavaScript',
     detailed:
@@ -146,6 +180,40 @@ export const REMEDIATIONS: Record<string, RemediationPlan> = {
     validationSteps: ['Confirm no task exceeds 50ms', 'Verify results identical after chunking'],
     businessSafetyNote: 'Same computation and output — only scheduled in interruptible chunks.',
     relatedResources: [{ title: 'Optimize long tasks', url: 'https://web.dev/articles/optimize-long-tasks' }],
+  }),
+
+  'suspected-memory-leak': r({
+    summary: 'Find and release retained objects (listeners, timers, detached nodes)',
+    detailed:
+      'Sustained heap growth that never recedes suggests objects are being retained. Common causes: event listeners never removed, timers never cleared, growing caches/arrays, and detached DOM nodes held by closures. Use the DevTools Memory panel to compare heap snapshots and find what is retained.',
+    codeExample: {
+      language: 'javascript',
+      before: 'el.addEventListener("scroll", onScroll); // never removed when el is discarded',
+      after: 'el.addEventListener("scroll", onScroll);\n// on teardown:\nel.removeEventListener("scroll", onScroll);',
+    },
+    riskLevel: 'review',
+    riskExplanation: 'This is a heuristic — growth can be legitimate (e.g., loading data). Confirm with heap snapshots before changing code.',
+    estimatedImpact: 'Prevents unbounded memory growth and the slowdowns/crashes it causes over time',
+    validationSteps: ['Take DevTools heap snapshots over time', 'Look for detached nodes / growing retainers', 'Add cleanup (removeEventListener, clearInterval, bounded caches)', 'Confirm heap plateaus'],
+    businessSafetyNote: 'Cleanup must not remove listeners/timers still in use — verify functionality after adding teardown.',
+    relatedResources: [{ title: 'Fix memory problems', url: 'https://developer.chrome.com/docs/devtools/memory-problems' }],
+  }),
+
+  'oversized-images': r({
+    summary: 'Compress, resize, and serve modern image formats',
+    detailed:
+      'Large images dominate page weight. Serve appropriately-sized images with responsive srcset, compress them, and use modern formats (WebP/AVIF) which are far smaller than PNG/JPEG.',
+    codeExample: {
+      language: 'html',
+      before: '<img src="hero.png">  <!-- 1.8MB PNG -->',
+      after: '<img src="hero.avif" srcset="hero-480.avif 480w, hero-1080.avif 1080w" sizes="100vw" width="1080" height="540">',
+    },
+    riskLevel: 'safe',
+    riskExplanation: 'Re-encoding/resizing does not change behavior; pick quality settings that preserve acceptable fidelity.',
+    estimatedImpact: 'Often 50–80% image-byte reduction; improves LCP and total weight',
+    validationSteps: ['Identify oversized images', 'Generate AVIF/WebP + responsive sizes', 'Verify visual quality and correct variant selection'],
+    businessSafetyNote: 'Same images, smaller; verify quality and that dimensions are reserved to avoid layout shift.',
+    relatedResources: [{ title: 'Optimize images', url: 'https://web.dev/articles/use-imagemin-to-compress-images' }],
   }),
 
   'unthrottled-listeners': r({

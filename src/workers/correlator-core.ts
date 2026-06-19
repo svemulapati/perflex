@@ -626,6 +626,14 @@ export class Correlator {
       domQueries: this.domQueries,
       runtime: this.latestRuntime,
       frameworks: this.frameworks,
+      memory: {
+        growthRatePerMin: this.memoryGrowthRate(),
+        sampleCount: this.heapSamples.length,
+        spanMs:
+          this.heapSamples.length >= 2
+            ? this.heapSamples[this.heapSamples.length - 1].t - this.heapSamples[0].t
+            : 0,
+      },
     };
   }
 

@@ -96,8 +96,23 @@ export function networkMatchers(input: AnalysisInput): PerformanceFinding[] {
     );
   }
 
-  // 26. Oversized payloads (>500KB)
-  const oversized = input.resources.filter((r) => r.transferSize > 500 * KB);
+  // 26b. Oversized images (lower threshold than payloads — images compress well;
+  // image-specific guidance). Owns 'img' so it doesn't double-flag with payloads.
+  const bigImages = input.resources.filter((r) => r.initiatorType === 'img' && r.transferSize > 150 * KB);
+  if (bigImages.length > 0) {
+    const largest = Math.max(...bigImages.map((r) => r.transferSize));
+    out.push(
+      makeFinding('oversized-images', largest > MB ? 'critical' : 'warning', {
+        confidence: 0.8,
+        description: `${bigImages.length} image(s) over 150KB (largest ${(largest / MB).toFixed(2)}MB). Likely unoptimized format/dimensions.`,
+        evidence: { sampleEntries: bigImages.slice(0, 5).map((r) => ({ url: r.url, bytes: r.transferSize })) },
+        impact: { frequency: bigImages.length, totalDuration: bigImages.reduce((s, r) => s + r.duration, 0), coreWebVitalAffected: 'LCP' },
+      })
+    );
+  }
+
+  // 26. Oversized payloads (>500KB), excluding images (owned by oversized-images)
+  const oversized = input.resources.filter((r) => r.transferSize > 500 * KB && r.initiatorType !== 'img');
   for (const r of oversized) {
     out.push(
       makeFinding('oversized-payload', r.transferSize > 2 * MB ? 'critical' : 'warning', {

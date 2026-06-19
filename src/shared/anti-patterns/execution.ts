@@ -37,6 +37,19 @@ export function executionMatchers(input: AnalysisInput): PerformanceFinding[] {
     );
   }
 
+  // 8b. Suspected memory leak — sustained heap growth over the session.
+  const mem = input.memory;
+  const mbPerMin = mem.growthRatePerMin / (1024 * 1024);
+  if (mbPerMin > 5 && mem.sampleCount >= 4 && mem.spanMs >= 60_000) {
+    out.push(
+      makeFinding('suspected-memory-leak', 'warning', {
+        confidence: 0.4,
+        description: `JS heap grew ~${mbPerMin.toFixed(1)} MB/min over ${(mem.spanMs / 60000).toFixed(1)} min. This may indicate a leak — verify it isn't legitimate data loading.`,
+        impact: { frequency: mem.sampleCount, totalDuration: 0, estimatedUserImpact: 'medium' },
+      })
+    );
+  }
+
   // 9. Unthrottled high-frequency listeners
   const rt = input.runtime;
   if (rt && (rt.hiFreqScrollPerSec > 30 || rt.hiFreqMovePerSec > 60) && input.timeline.frames.length > 0) {

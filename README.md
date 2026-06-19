@@ -4,7 +4,7 @@
 
 ### The browser extension that tells you *which line of JavaScript* is making your site slow — and how to fix it.
 
-**Real-time JavaScript performance profiler for Chrome with function-level attribution, 30+ automatic anti-pattern detectors, and AI-powered, business-safe remediation.**
+**Real-time JavaScript performance profiler for Chrome with function-level attribution, 37 automatic anti-pattern detectors, and AI-powered, business-safe remediation.**
 
 A free, open-source, privacy-first alternative to Lighthouse, the Chrome DevTools Performance panel, and commercial RUM (Sentry / Datadog / New Relic) — but focused on *attribution depth* and *actionable fixes*, right in your browser side panel.
 
@@ -27,7 +27,7 @@ A free, open-source, privacy-first alternative to Lighthouse, the Chrome DevTool
 
 Most performance tools tell you *that* your page is slow. Perflex tells you **exactly what to change.**
 
-It's a Chrome (Manifest V3) extension that passively instruments a page — capturing network traffic, long tasks, layout thrashing, forced reflows, layout shifts, memory, and more — then attributes that cost down to the **originating script, function, and character position**. It pattern-matches your session against **30 known performance anti-patterns** and generates **remediation plans with before/after code, a risk level, and a "why this won't break your business logic" note.**
+It's a Chrome (Manifest V3) extension that passively instruments a page — capturing network traffic, long tasks, layout thrashing, forced reflows, layout shifts, memory, and more — then attributes that cost down to the **originating script, function, and character position**. It pattern-matches your session against **37 known performance anti-patterns** and generates **remediation plans with before/after code, a risk level, and a "why this won't break your business logic" note.**
 
 Everything runs **locally in your browser**. No account, no data leaves your machine (the optional AI feature sends only an anonymized, PII-free summary — and only if you add your own API key).
 
@@ -37,7 +37,7 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 - 🏆 **Script Leaderboard** — every script ranked by main-thread time, long tasks, transfer size, layout-shift contribution, and memory growth. Sortable, filterable (first-party vs third-party), expandable to per-function hotspots.
 - 📊 **Core Web Vitals, live** — **LCP, INP, CLS**, TBT, FPS, JS heap, and a composite **0–100 health score** with an A–F grade.
 - ⏱️ **Interaction timeline** — a zoomable, pannable **flame-chart-style timeline** (lanes for interactions, long tasks, network waterfall, layout shifts, frame drops, and memory) built on D3. Click any interaction to see its **causal chain**: `click → long task → fetch → DOM mutation → reflow → layout shift`.
-- 🩺 **33 anti-pattern detectors** across Loading, Execution, Rendering, Network, Third-party, and **Framework** — layout thrashing, render-blocking scripts, synchronous XHR, redundant fetches, oversized/uncompressed payloads, unbounded list rendering, excessive DOM size, timer flooding, third-party main-thread domination, and more.
+- 🩺 **37 anti-pattern detectors** across Loading, Execution, Rendering, Network, Third-party, and **Framework** — layout thrashing, render-blocking scripts, synchronous XHR, redundant fetches, oversized/uncompressed payloads, unbounded list rendering, excessive DOM size, timer flooding, third-party main-thread domination, and more.
 - ⚛️ **Framework-aware** — detects React, Vue, Angular, Next.js, Nuxt, Preact, and jQuery, and flags the costly mistakes: a **development build shipped to production** (reliably detected for React via the DevTools `bundleType`), **multiple UI frameworks** loaded on one page, and **outdated major versions**.
 - 🛠️ **Business-safe remediation** — every finding ships with a fix: a one-line summary, before/after code diff, **risk level** (safe / verify / review), validation steps, and an explicit business-safety note.
 - 🤖 **AI remediation (opt-in)** — bring your own **Claude API key** for contextual, code-specific fixes. Only a sanitized summary (filename + function + metrics) is ever sent — never URLs with tokens, request bodies, or page content.
@@ -64,7 +64,7 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 | Findings & Remediation | Settings |
 |:---:|:---:|
 | ![Findings with before/after fix and risk level](docs/screenshots/findings.png) | ![Settings — AI key, first-party domains, share & export](docs/screenshots/settings.png) |
-| **30+ detectors with business-safe fixes** | **AI remediation, sharing & export** |
+| **37 detectors with business-safe fixes** | **AI remediation, sharing & export** |
 
 ## 🚀 Install in 60 seconds
 
@@ -110,7 +110,7 @@ In **Settings → Share** you can:
 |---|:---:|:---:|:---:|:---:|
 | Runs live in the browser | ✅ | ⚠️ lab run | ✅ | ✅ |
 | Function-level attribution | ✅ | ❌ | ⚠️ manual | ❌ |
-| 33 automatic anti-pattern detectors | ✅ | ⚠️ subset | ❌ | ⚠️ subset |
+| 37 automatic anti-pattern detectors | ✅ | ⚠️ subset | ❌ | ⚠️ subset |
 | Concrete before/after fix + risk level | ✅ | ⚠️ generic | ❌ | ❌ |
 | AI-generated contextual remediation | ✅ | ❌ | ❌ | ⚠️ paid |
 | Interaction causal chains | ✅ | ❌ | ⚠️ manual | ⚠️ |

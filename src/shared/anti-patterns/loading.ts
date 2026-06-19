@@ -25,6 +25,23 @@ export function loadingMatchers(input: AnalysisInput): PerformanceFinding[] {
     );
   }
 
+  // 1b. Render-blocking stylesheets
+  const blockingCss = input.resources.filter(
+    (r) =>
+      (r.initiatorType === 'link' || r.initiatorType === 'css') &&
+      (r.renderBlockingStatus === 'blocking' || (r.startTime < fcp && r.renderBlockingStatus !== 'non-blocking'))
+  );
+  if (blockingCss.length > 0) {
+    out.push(
+      makeFinding('render-blocking-stylesheet', 'warning', {
+        confidence: blockingCss.some((b) => b.renderBlockingStatus === 'blocking') ? 0.8 : 0.5,
+        description: `${blockingCss.length} stylesheet(s) blocked rendering before first paint.`,
+        evidence: { scriptUrl: blockingCss[0].url, sampleEntries: blockingCss.slice(0, 5) },
+        impact: { frequency: blockingCss.length, totalDuration: blockingCss.reduce((s, b) => s + b.duration, 0), coreWebVitalAffected: 'LCP' },
+      })
+    );
+  }
+
   // 2. Unused JavaScript (downloaded but never executed this session)
   const unused = input.scripts.filter(
     (s) => s.metrics.totalTransferSize > 100 * KB && s.metrics.totalMainThreadTime === 0 && s.metrics.longTaskCount === 0
@@ -93,6 +110,18 @@ export function loadingMatchers(input: AnalysisInput): PerformanceFinding[] {
         description: `${shortName(s.url)} is ${Math.round(sizeKB)}KB transferred — large parse/compile cost on the main thread.`,
         evidence: { scriptUrl: s.url, sampleEntries: [s] },
         impact: { frequency: 1, totalDuration: s.decodedBodySize / 10_240 },
+      })
+    );
+  }
+
+  // 7. document.write usage
+  const dw = input.runtime?.documentWriteCount ?? 0;
+  if (dw > 0) {
+    out.push(
+      makeFinding('document-write', 'warning', {
+        confidence: 0.9,
+        description: `document.write was called ${dw} time(s). It blocks the parser and, after load, wipes the document.`,
+        impact: { frequency: dw, totalDuration: 0, coreWebVitalAffected: 'LCP' },
       })
     );
   }

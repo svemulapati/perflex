@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { analyze, PATTERN_META } from '../../src/shared/anti-patterns';
 import { REMEDIATIONS } from '../../src/shared/remediation-templates';
-import type { AnalysisInput, NetworkEvent, ResourceEvent } from '../../src/shared/types';
+import type { AnalysisInput, NetworkEvent, ResourceEvent, RuntimeStatsEvent } from '../../src/shared/types';
+
+function runtimeStats(over: Partial<RuntimeStatsEvent> = {}): RuntimeStatsEvent {
+  return {
+    seq: 0, kind: 'runtime-stats', timestamp: 0, consolePerSec: 0, domElementCount: 0, domMaxDepth: 0,
+    longestSiblingRun: 0, willChangeCount: 0, syncXhrCount: 0, hiFreqScrollPerSec: 0, hiFreqMovePerSec: 0,
+    documentWriteCount: 0, documentWriteBytes: 0, ...over,
+  };
+}
 
 function baseInput(over: Partial<AnalysisInput> = {}): AnalysisInput {
   return {
@@ -21,6 +29,7 @@ function baseInput(over: Partial<AnalysisInput> = {}): AnalysisInput {
     domQueries: [],
     runtime: null,
     frameworks: [],
+    memory: { growthRatePerMin: 0, sampleCount: 0, spanMs: 0 },
     ...over,
   };
 }
@@ -129,6 +138,42 @@ describe('matchers', () => {
     const f = findings.find((x) => x.patternId === 'third-party-main-thread');
     expect(f).toBeDefined();
     expect(f!.severity).toBe('critical'); // 300/400 = 75% > 50%
+  });
+
+  it('flags render-blocking stylesheets', () => {
+    const findings = analyze(
+      baseInput({ resources: [resource({ url: 'https://example.com/app.css', initiatorType: 'link', renderBlockingStatus: 'blocking' })] })
+    );
+    const f = findings.find((x) => x.patternId === 'render-blocking-stylesheet');
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe('warning');
+  });
+
+  it('flags document.write usage from runtime stats', () => {
+    const findings = analyze(baseInput({ runtime: runtimeStats({ documentWriteCount: 3 }) }));
+    const f = findings.find((x) => x.patternId === 'document-write');
+    expect(f).toBeDefined();
+    expect(f!.impact.frequency).toBe(3);
+  });
+
+  it('flags a suspected memory leak only with sustained growth + enough samples', () => {
+    expect(
+      analyze(baseInput({ memory: { growthRatePerMin: 10 * 1024 * 1024, sampleCount: 6, spanMs: 120_000 } }))
+        .some((x) => x.patternId === 'suspected-memory-leak')
+    ).toBe(true);
+    // Too few samples → no finding (avoids false positives).
+    expect(
+      analyze(baseInput({ memory: { growthRatePerMin: 10 * 1024 * 1024, sampleCount: 2, spanMs: 120_000 } }))
+        .some((x) => x.patternId === 'suspected-memory-leak')
+    ).toBe(false);
+  });
+
+  it('flags oversized images and does not double-count them as oversized payloads', () => {
+    const findings = analyze(
+      baseInput({ resources: [resource({ url: 'https://example.com/hero.png', initiatorType: 'img', transferSize: 700 * 1024 })] })
+    );
+    expect(findings.some((x) => x.patternId === 'oversized-images')).toBe(true);
+    expect(findings.some((x) => x.patternId === 'oversized-payload')).toBe(false);
   });
 
   it('returns nothing on a clean session', () => {

@@ -254,6 +254,8 @@ export interface RuntimeStatsEvent extends BaseEvent {
   syncXhrCount: number;
   hiFreqScrollPerSec: number;
   hiFreqMovePerSec: number;
+  documentWriteCount: number;
+  documentWriteBytes: number;
 }
 
 export type CollectorEvent =
@@ -509,6 +511,7 @@ export interface AnalysisInput {
   domQueries: DomQueryEvent[];
   runtime: RuntimeStatsEvent | null;
   frameworks: DetectedFramework[];
+  memory: { growthRatePerMin: number; sampleCount: number; spanMs: number };
 }
 
 /* ---- Messaging envelopes ---- */

@@ -82,6 +82,30 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
   wrapQueryAll(Document.prototype);
   wrapQueryAll(Element.prototype);
 
+  // ---- document.write / writeln (render-blocking, deprecated) ----
+  let documentWriteCount = 0;
+  let documentWriteBytes = 0;
+  const wrapWrite = (method: 'write' | 'writeln') => {
+    const proto = Document.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
+    const orig = proto[method];
+    if (typeof orig !== 'function') return;
+    proto[method] = function (this: Document, ...args: unknown[]) {
+      try {
+        documentWriteCount++;
+        for (const a of args) documentWriteBytes += String(a).length;
+      } catch {
+        /* never disturb the page */
+      }
+      // Transparent: invoke the original on the document, unchanged.
+      return orig.apply(this ?? document, args);
+    };
+    restorers.push(() => {
+      proto[method] = orig;
+    });
+  };
+  wrapWrite('write');
+  wrapWrite('writeln');
+
   // ---- high-frequency input counters (passive, no handler patching) ----
   let scrollCount = 0;
   let moveCount = 0;
@@ -158,6 +182,8 @@ export function setupRuntimeHooks(ctx: CollectorContext): () => void {
         syncXhrCount: 0, // derived in the correlator from network events
         hiFreqScrollPerSec: scrollCount / (SAMPLE_MS / 1000),
         hiFreqMovePerSec: moveCount / (SAMPLE_MS / 1000),
+        documentWriteCount, // cumulative — document.write matters even once
+        documentWriteBytes,
       };
       ctx.emit(event);
       scrollCount = 0;

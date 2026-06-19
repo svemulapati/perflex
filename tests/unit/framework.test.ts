@@ -20,6 +20,7 @@ function input(frameworks: DetectedFramework[], resources: ResourceEvent[] = [])
     domQueries: [],
     runtime: null,
     frameworks,
+    memory: { growthRatePerMin: 0, sampleCount: 0, spanMs: 0 },
   };
 }
 
