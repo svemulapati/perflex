@@ -7,3 +7,6 @@ public/perflex-collector.js
 
 .DS_Store
 *.log
+
+# Web Store upload package (build artifact)
+perflex-*.zip

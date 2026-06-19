@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Perflex — Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; font-family: ui-sans-serif, system-ui, sans-serif; line-height: 1.6; color: #1f2328; }
+  @media (prefers-color-scheme: dark) { body { background: #0d1117; color: #e6edf3; } a { color: #6366F1; } }
+  h1 { font-size: 26px; } h2 { font-size: 18px; margin-top: 28px; }
+  code { background: rgba(127,127,127,.15); padding: 1px 5px; border-radius: 4px; }
+  .muted { color: #8b949e; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Perflex Privacy Policy</h1>
+<p class="muted">Last updated: 2026-06-19</p>
+
+<p><strong>Perflex is a privacy-first, local-only browser extension.</strong> It does not require an account, does not track you, and does not upload your browsing or performance data to any server operated by us. We do not operate any server at all.</p>
+
+<h2>What Perflex does</h2>
+<p>Perflex measures and diagnoses the JavaScript performance of web pages you choose to profile. It captures performance signals from the page — long tasks, network request timings, layout shifts, memory usage, DOM activity, and similar metrics — and analyzes them entirely within your browser to produce a performance report and suggested fixes.</p>
+
+<h2>Data we collect</h2>
+<p><strong>None is sent to us.</strong> All captured performance data is processed locally in your browser and held only for the duration of your session. We do not collect personally identifiable information, authentication credentials, financial information, health information, personal communications, location, or web-browsing history.</p>
+
+<h2>Local storage</h2>
+<p>The extension stores your settings locally on your device using the browser's extension storage. This includes: an optional Anthropic Claude API key (if you choose to provide one), a list of first-party domains you configure, and the viewer URL used for shareable links. This data never leaves your device except as described in “Optional AI feature” below.</p>
+
+<h2>Optional AI feature</h2>
+<p>If — and only if — you supply your own Anthropic Claude API key and explicitly click “AI Analysis” on a finding, Perflex sends an <em>anonymized, non-identifying summary</em> of that single finding (e.g. the pattern name, the script filename, the function name, and timing metrics) to Anthropic's API (<code>api.anthropic.com</code>) to generate a remediation. Full URLs (including any query strings or tokens), request/response bodies, and page content are <strong>never</strong> sent. This transmission is governed by <a href="https://www.anthropic.com/legal/privacy">Anthropic's privacy policy</a>. This feature is off unless you configure an API key.</p>
+
+<h2>Sharing &amp; exports</h2>
+<p>When you export a session or create a shareable link, the data is encoded on your device. Shareable permalinks place the encoded session in the URL fragment, which browsers do not transmit to any server. Exported files are saved locally. You control where any of this data goes.</p>
+
+<h2>Data sharing &amp; sale</h2>
+<p>We do not sell, rent, or share your data with third parties. We have no analytics, no advertising, and no telemetry.</p>
+
+<h2>Permissions</h2>
+<p>Perflex requests broad host access (<code>&lt;all_urls&gt;</code>) and scripting permissions because, as a performance profiler, it must be able to instrument whichever page you choose to analyze. These permissions are used solely to capture and analyze performance data locally.</p>
+
+<h2>Contact</h2>
+<p>Questions or issues: <a href="https://github.com/svemulapati/perflex/issues">github.com/svemulapati/perflex/issues</a>.</p>
+</body>
+</html>
