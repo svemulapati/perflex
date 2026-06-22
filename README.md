@@ -8,7 +8,11 @@
 
 A free, open-source, privacy-first alternative to Lighthouse, the Chrome DevTools Performance panel, and commercial RUM (Sentry / Datadog / New Relic) — but focused on *attribution depth* and *actionable fixes*, right in your browser side panel.
 
-[Install](#-install-in-60-seconds) · [Features](#-features) · [How it works](#-how-it-works) · [Why Perflex](#-perflex-vs-the-alternatives) · [Contributing](#-contributing)
+[**▶ Add to Chrome**](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag) · [Install](#-install-in-60-seconds) · [Features](#-features) · [How it works](#-how-it-works) · [Why Perflex](#-perflex-vs-the-alternatives) · [Contributing](#-contributing)
+
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/mhnljjmpmafepjemojpdifjjfldlgaag?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white&color=4285F4)](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)
+[![Users](https://img.shields.io/chrome-web-store/users/mhnljjmpmafepjemojpdifjjfldlgaag?label=users&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)
+[![Rating](https://img.shields.io/chrome-web-store/rating/mhnljjmpmafepjemojpdifjjfldlgaag?label=rating&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)
 
 ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -69,7 +73,17 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 
 ## 🚀 Install in 60 seconds
 
-> Perflex is currently distributed as an unpacked extension (Chrome Web Store listing coming soon).
+### Option 1 — Chrome Web Store (recommended)
+
+<div align="center">
+
+### [**▶ Add Perflex to Chrome**](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)
+
+</div>
+
+One click — no build step. Works in **Chrome, Edge, Brave, Arc**, and other Chromium browsers.
+
+### Option 2 — From source (for development)
 
 ```bash
 git clone https://github.com/svemulapati/perflex.git
@@ -85,7 +99,7 @@ Then load it:
 3. Click **Load unpacked** → select the `dist/` folder
 4. Pin the ⚡ Perflex icon, open any page, and hit the icon (or `Ctrl+Shift+P`)
 
-Works in **Chrome, Edge, Brave, Arc**, and other Chromium browsers. *(On Arc, the dashboard opens in a standalone window since Arc doesn't yet support the side-panel API.)*
+*(On Arc, the dashboard opens in a standalone window since Arc doesn't yet support the side-panel API.)*
 
 ## 🧭 Using it
 
@@ -208,7 +222,7 @@ Found a site where Perflex misbehaves or misses an issue? **[Open an issue](http
 
 ## 🗺️ Roadmap
 
-- [ ] Chrome Web Store listing
+- [x] **[Chrome Web Store listing](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)** — live!
 - [ ] DevTools panel integration
 - [ ] Firefox / Safari support
 - [ ] Coverage-API-backed unused-JS detection
