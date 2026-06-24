@@ -3,7 +3,10 @@ import { useSessionStore } from '../stores/session-store';
 import { HealthScore } from '../components/HealthScore';
 import { MetricBadge } from '../components/MetricBadge';
 import { Sparkline } from '../components/Sparkline';
+import { LighthouseGauge } from '../components/lighthouse/LighthouseGauge';
+import { WhatIfSimulator } from '../components/lighthouse/WhatIfSimulator';
 import { CWV_THRESHOLDS } from '@/shared/constants';
+import { estimateSpeedIndex, scorePerformance, type LighthouseMetrics } from '@/shared/lighthouse-scoring';
 import { bytes, ms, shortUrl } from '../format';
 import type { CoreWebVitals } from '@/shared/types';
 
@@ -37,11 +40,22 @@ export function Overview() {
   const secondary = deferred ?? snapshot;
   const topOffenders = secondary.scripts.filter((s) => s.metrics.totalMainThreadTime > 0).slice(0, 3);
 
+  // Local Lighthouse v11 estimate (Feature 7). Computed from the deferred
+  // snapshot so it can't jitter ahead of the critical metrics.
+  const lhMetrics: LighthouseMetrics = {
+    fcp: secondary.vitals.fcp,
+    si: estimateSpeedIndex(secondary.vitals.fcp, secondary.totalBlockingTime),
+    lcp: secondary.vitals.lcp,
+    tbt: secondary.totalBlockingTime,
+    cls: secondary.vitals.cls,
+  };
+  const lhEstimate = scorePerformance(lhMetrics);
+
   return (
     <div className="contain-content flex flex-col gap-4 p-3">
-      <div className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+      <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
         <HealthScore score={snapshot.healthScore} />
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="text-xs uppercase tracking-wide text-zinc-500">Session Health</div>
           <div className="mt-1 grid grid-cols-2 gap-1.5">
             <MetricBadge label="FPS" value={String(meta.fps)} status={meta.fps >= 55 ? 'good' : meta.fps >= 30 ? 'warn' : 'poor'} />
@@ -51,6 +65,12 @@ export function Overview() {
               status={meta.frameHealth >= 90 ? 'good' : meta.frameHealth >= 70 ? 'warn' : 'poor'}
             />
           </div>
+        </div>
+        <div
+          className="flex shrink-0 flex-col items-center"
+          title="Estimated from Perflex's measurements. Run Lighthouse for the official score."
+        >
+          <LighthouseGauge score={lhEstimate.score} />
         </div>
       </div>
 
@@ -93,6 +113,21 @@ export function Overview() {
           />
         </div>
       </section>
+
+      {lhEstimate.score !== null && secondary.findings.length > 0 && (
+        <section>
+          <h3 className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            What If — Lighthouse Impact
+            <span
+              className="cursor-help text-zinc-600"
+              title="Estimated score gains if you resolve each finding. Approximate — run Lighthouse for the official score."
+            >
+              ⓘ
+            </span>
+          </h3>
+          <WhatIfSimulator metrics={lhMetrics} baseScore={lhEstimate.score} findings={secondary.findings} />
+        </section>
+      )}
 
       <section>
         <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
