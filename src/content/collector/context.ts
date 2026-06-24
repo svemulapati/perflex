@@ -18,6 +18,7 @@ export interface NativeClock {
 
 export class CollectorContext {
   private seq = 0;
+  private lastTimestamp = 0;
   readonly breaker: CircuitBreaker;
 
   /**
@@ -43,6 +44,13 @@ export class CollectorContext {
 
   emit(event: CollectorEvent): void {
     event.seq = ++this.seq;
+    // Guarantee monotonic timestamps. performance.now() can briefly go
+    // backwards across clock adjustments; the correlator sorts by timestamp, so
+    // nudge any regression to just past the last value (D.2 data integrity).
+    if (event.timestamp < this.lastTimestamp) {
+      event.timestamp = this.lastTimestamp + 0.001;
+    }
+    this.lastTimestamp = event.timestamp;
     this.sink(event);
   }
 

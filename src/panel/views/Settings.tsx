@@ -143,6 +143,32 @@ export function Settings() {
         </div>
       </Section>
 
+      {/* Phase 2 opt-in modules */}
+      <Section title="Experimental Modules">
+        <p className="text-[11px] text-zinc-400">
+          Extra collectors, off by default because each adds a little main-thread overhead. Enable only
+          what you need.
+        </p>
+        {(
+          [
+            ['websocketMonitor', 'WebSocket monitoring'],
+            ['workerMonitor', 'Web Worker profiling'],
+            ['flowRecorder', 'User flow recording'],
+            ['heatmap', 'Performance heatmap overlay'],
+            ['replay', 'Performance replay capture'],
+          ] as const
+        ).map(([flag, label]) => (
+          <label key={flag} className="flex items-center gap-2 text-[11px]">
+            <input
+              type="checkbox"
+              checked={settings.featureFlags[flag]}
+              onChange={(e) => settings.update({ featureFlags: { [flag]: e.target.checked } })}
+            />
+            <span>{label}</span>
+          </label>
+        ))}
+      </Section>
+
       {/* Classification */}
       <Section title="First-Party Domains">
         <p className="text-[11px] text-zinc-400">

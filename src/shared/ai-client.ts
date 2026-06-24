@@ -107,9 +107,74 @@ export function toRemediation(raw: AiRaw, fallbackSummary: string): RemediationP
   };
 }
 
+/** Default backoff schedule: 2 retries after 1s then 3s (spec B.5). */
+const RETRY_DELAYS_MS = [1000, 3000];
+
+/** Map an HTTP status to a user-facing message — never a raw stack or body. */
+export function friendlyApiError(status: number): string {
+  if (status === 401 || status === 403)
+    return 'Your Anthropic API key was rejected. Check the key in Settings.';
+  if (status === 429) return 'Claude is rate-limiting requests right now. Try again in a moment.';
+  if (status === 400) return 'Claude rejected the request. This finding may be malformed — try another.';
+  if (status >= 500) return 'Claude is temporarily unavailable. Please try again shortly.';
+  return `Claude returned an unexpected error (${status}).`;
+}
+
 export interface AiOptions {
   apiKey: string;
   model: string;
+  /** Advanced/test hooks — omit in production. */
+  fetchImpl?: typeof fetch;
+  sleepImpl?: (ms: number) => Promise<void>;
+  retryDelaysMs?: number[];
+}
+
+const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * POST to the Claude API with bounded exponential backoff. Retries only on
+ * transient failures (network error, 429, 5xx); fails fast on auth/client
+ * errors. Always throws a user-friendly Error — never a raw stack.
+ */
+export async function postToClaude(body: object, opts: AiOptions): Promise<string> {
+  const doFetch = opts.fetchImpl ?? fetch;
+  const doSleep = opts.sleepImpl ?? defaultSleep;
+  const delays = opts.retryDelaysMs ?? RETRY_DELAYS_MS;
+
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      res = await doFetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': opts.apiKey,
+          'anthropic-version': ANTHROPIC_VERSION,
+          // Required to call the API directly from a browser/extension context.
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // Network-level failure (offline, DNS, CORS) — retriable.
+      if (attempt >= delays.length)
+        throw new Error('Could not reach Claude. Check your network connection and try again.');
+      await doSleep(delays[attempt]);
+      continue;
+    }
+
+    if (res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { content?: Array<{ text?: string }> };
+      return data.content?.map((c) => c.text ?? '').join('') ?? '';
+    }
+
+    const retriable = res.status === 429 || res.status >= 500;
+    if (retriable && attempt < delays.length) {
+      await doSleep(delays[attempt]);
+      continue;
+    }
+    throw new Error(friendlyApiError(res.status));
+  }
 }
 
 const cache = new Map<string, RemediationPlan>();
@@ -128,29 +193,15 @@ export async function generateRemediation(
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': opts.apiKey,
-      'anthropic-version': ANTHROPIC_VERSION,
-      // Required to call the API directly from a browser/extension context.
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
+  const text = await postToClaude(
+    {
       model: opts.model,
       max_tokens: 1024,
       messages: [{ role: 'user', content: buildPrompt(sanitized) }],
-    }),
-  });
+    },
+    opts
+  );
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Claude API error ${res.status}: ${detail.slice(0, 200)}`);
-  }
-
-  const data = (await res.json()) as { content?: Array<{ text?: string }> };
-  const text = data.content?.map((c) => c.text ?? '').join('') ?? '';
   const plan = toRemediation(extractJson(text), finding.remediation?.summary ?? finding.patternName);
   cache.set(key, plan);
   return plan;

@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest';
-import { buildPrompt, sanitizeFinding, toRemediation } from '../../src/shared/ai-client';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  buildPrompt,
+  friendlyApiError,
+  postToClaude,
+  sanitizeFinding,
+  toRemediation,
+} from '../../src/shared/ai-client';
 import type { PerformanceFinding } from '../../src/shared/types';
+
+/** Minimal Response stand-in (jsdom has no global Response in node env). */
+function fakeResponse(status: number, body: unknown): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
+  } as Response;
+}
+
+const okBody = { content: [{ text: 'hello' }] };
+const noSleep = async () => {};
 
 const finding: PerformanceFinding = {
   id: 'x',
@@ -68,5 +87,54 @@ describe('toRemediation', () => {
   it('defaults risk to verify for unknown values', () => {
     const plan = toRemediation({ rootCause: 'x', risk: 'nonsense' }, 'fallback');
     expect(plan.riskLevel).toBe('verify');
+  });
+});
+
+describe('friendlyApiError', () => {
+  it('never leaks raw detail and covers the key statuses', () => {
+    expect(friendlyApiError(401)).toMatch(/key/i);
+    expect(friendlyApiError(429)).toMatch(/rate/i);
+    expect(friendlyApiError(503)).toMatch(/unavailable/i);
+    expect(friendlyApiError(418)).toMatch(/unexpected/i);
+  });
+});
+
+describe('postToClaude retry/backoff', () => {
+  const opts = (fetchImpl: typeof fetch) => ({
+    apiKey: 'k',
+    model: 'm',
+    fetchImpl,
+    sleepImpl: noSleep,
+    retryDelaysMs: [0, 0],
+  });
+
+  it('returns concatenated text on first success', async () => {
+    const f = vi.fn(async () => fakeResponse(200, okBody)) as unknown as typeof fetch;
+    expect(await postToClaude({}, opts(f))).toBe('hello');
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries on 503 then succeeds', async () => {
+    let n = 0;
+    const f = vi.fn(async () => {
+      n++;
+      return n < 3 ? fakeResponse(503, 'down') : fakeResponse(200, okBody);
+    }) as unknown as typeof fetch;
+    expect(await postToClaude({}, opts(f))).toBe('hello');
+    expect(f).toHaveBeenCalledTimes(3);
+  });
+
+  it('fails fast on 401 without retrying', async () => {
+    const f = vi.fn(async () => fakeResponse(401, 'bad key')) as unknown as typeof fetch;
+    await expect(postToClaude({}, opts(f))).rejects.toThrow(/key/i);
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries network errors then throws a friendly message', async () => {
+    const f = vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    await expect(postToClaude({}, opts(f))).rejects.toThrow(/network/i);
+    expect(f).toHaveBeenCalledTimes(3); // initial + 2 retries
   });
 });
