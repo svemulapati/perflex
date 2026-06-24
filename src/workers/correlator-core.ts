@@ -33,6 +33,7 @@ import {
   HEALTH_WEIGHTS,
   INTERACTION_QUIET_WINDOW,
   LONG_TASK_THRESHOLD,
+  MAX_TIME_SERIES_BUCKETS,
   TIME_SERIES_BUCKET,
 } from '@/shared/constants';
 import { classifyScript } from '@/shared/script-classifier';
@@ -509,10 +510,19 @@ export class Correlator {
   private buildProfiles(): ScriptProfile[] {
     const maxBucket = this.bucketOf(this.lastTimestamp);
     const profiles: ScriptProfile[] = [];
+    // Rolling window: only the most recent buckets are kept, so timeSeries (and
+    // the underlying per-script buckets Map) stay bounded over a long session.
+    const firstBucket = Math.max(0, maxBucket - MAX_TIME_SERIES_BUCKETS + 1);
     for (const a of this.scripts.values()) {
       const c = classifyScript(a.url, this.pageOrigin, this.allowlist);
       const timeSeries: number[] = [];
-      for (let i = 0; i <= maxBucket; i++) timeSeries.push(a.buckets.get(i) ?? 0);
+      for (let i = firstBucket; i <= maxBucket; i++) timeSeries.push(a.buckets.get(i) ?? 0);
+      // Drop buckets that have fallen out of the window to cap memory.
+      if (firstBucket > 0) {
+        for (const key of a.buckets.keys()) {
+          if (key < firstBucket) a.buckets.delete(key);
+        }
+      }
       const hotFunctions = [...a.functions.values()]
         .sort((x, y) => y.totalDuration - x.totalDuration)
         .slice(0, 10);

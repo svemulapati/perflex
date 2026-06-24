@@ -24,6 +24,14 @@ export const OVERHEAD_DISABLE_THRESHOLD = 0.05; // 5%
 /** Time-series bucket width for sparklines (ms). */
 export const TIME_SERIES_BUCKET = 5_000;
 
+/**
+ * Rolling-window cap on per-script sparkline buckets. Without this, timeSeries
+ * grows one entry per bucket for the whole session and is rebuilt + shipped in
+ * every snapshot (~4Hz), so a long session bloats both memory and per-snapshot
+ * CPU. 360 buckets = 30 min of trend, which is plenty for a sparkline.
+ */
+export const MAX_TIME_SERIES_BUCKETS = 360;
+
 export const SEVERITY_COLORS: Record<string, string> = {
   critical: '#EF4444',
   warning: '#F59E0B',

@@ -72,6 +72,18 @@ describe('Correlator', () => {
     expect(snap.healthScore).toBeLessThanOrEqual(100);
   });
 
+  it('caps per-script timeSeries to a rolling window over a long session', () => {
+    const c = new Correlator(ORIGIN);
+    // Two samples ~33 minutes apart → ~400 buckets of 5s. The window cap is 360.
+    c.ingest([loaf('https://example.com/app.js', 'render', 50, 100)]);
+    c.ingest([loaf('https://example.com/app.js', 'render', 50, 100 + 400 * 5000)]);
+    const snap = c.snapshot(1, ORIGIN);
+    const app = snap.scripts.find((s) => s.url.includes('app.js'))!;
+    expect(app.timeSeries.length).toBe(360);
+    // Most-recent bucket carries the latest sample; oldest sample fell out of window.
+    expect(app.timeSeries[app.timeSeries.length - 1]).toBe(50);
+  });
+
   it('resets all accumulated state', () => {
     const c = new Correlator(ORIGIN);
     c.ingest([loaf('https://example.com/app.js', 'render', 100)]);
