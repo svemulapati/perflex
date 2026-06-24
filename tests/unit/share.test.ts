@@ -26,7 +26,8 @@ function snapshot(): SessionSnapshot {
     findings: [
       {
         id: 'sync', patternId: 'synchronous-xhr', patternName: 'Synchronous XHR', category: 'execution', severity: 'critical', confidence: 0.95,
-        description: 'blocked the main thread', evidence: { sampleEntries: [] },
+        description: 'blocked the main thread',
+        evidence: { scriptUrl: 'https://example.com/app/bundle.js?token=SECRET123', functionName: 'load', sampleEntries: [{ secret: 'do-not-share' }] },
         impact: { frequency: 1, totalDuration: 100, affectedInteractions: [], estimatedUserImpact: 'high' },
       },
     ],
@@ -46,6 +47,24 @@ describe('share payload', () => {
     expect(p.findings).toHaveLength(1);
     expect(p.frameworks[0].name).toBe('React');
     expect(p.generatedAt).toBe(123);
+  });
+
+  it('precomputes a Lighthouse score and carries request/frame metrics', () => {
+    const p = buildSharePayload(bundle, 123);
+    expect(typeof p.lighthouseScore === 'number' || p.lighthouseScore === null).toBe(true);
+    expect(p.networkRequestCount).toBe(3);
+    expect(p.frameDropRate).toBe(0.1);
+  });
+
+  it('sanitizes findings — filename only, no tokens, no raw sample entries', () => {
+    const p = buildSharePayload(bundle, 123);
+    const f = p.findings[0];
+    expect(f.patternId).toBe('synchronous-xhr');
+    expect(f.evidence.file).toBe('bundle.js');
+    expect(f.evidence.functionName).toBe('load');
+    const serialized = JSON.stringify(p);
+    expect(serialized).not.toContain('SECRET123');
+    expect(serialized).not.toContain('do-not-share');
   });
 });
 

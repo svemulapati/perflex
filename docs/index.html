@@ -5,37 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Perflex — Shared Session</title>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg:#09090b; --surface:#0f0f12; --elevated:#18181b; --border:#27272a; --border-subtle:#1f1f23;
+    --text:#f4f4f5; --text2:#a1a1aa; --text3:#71717a; --brand:#6366F1; --brand2:#818cf8;
+  }
+  body.light {
+    color-scheme: light;
+    --bg:#fafafa; --surface:#ffffff; --elevated:#f4f4f5; --border:#e4e4e7; --border-subtle:#ececef;
+    --text:#18181b; --text2:#52525b; --text3:#71717a; --brand:#6366F1; --brand2:#4f46e5;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #09090b; color: #e4e4e7; font-family: ui-sans-serif, system-ui, sans-serif; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .logo { width: 26px; height: 26px; border-radius: 6px; background: #6366F1; color: #fff; font-weight: 800; display: grid; place-items: center; }
-  h1 { font-size: 18px; margin: 0; }
-  .url { color: #818cf8; font-size: 12px; word-break: break-all; margin-bottom: 2px; }
-  .meta { color: #71717a; font-size: 11px; }
-  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #71717a; margin: 24px 0 8px; }
-  .score { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
-  .badge { font-size: 40px; font-weight: 800; }
-  .vitals { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { border: 1px solid #27272a; background: #18181b; border-radius: 8px; padding: 6px 10px; font-size: 12px; }
-  .chip b { display: block; font-size: 16px; margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .fw { display: inline-block; background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 3px 8px; font-size: 11px; margin: 0 4px 4px 0; }
-  .fw.dev { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4); color: #fca5a5; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+  .muted { color: var(--text3); font-size: 12px; }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 22px 16px 72px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 28px; height: 28px; border-radius: 7px; background: var(--brand); color: #fff; font-weight: 800; display: grid; place-items: center; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: -.01em; }
+  .sub { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); }
+  .url { color: var(--brand2); font-size: 12px; word-break: break-all; margin-top: 12px; }
+  .meta { color: var(--text3); font-size: 11px; margin-top: 2px; }
+  .toggle { background: var(--elevated); color: var(--text2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; font-size: 11px; cursor: pointer; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin: 26px 0 10px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 5px; }
+  .verdict { background: var(--elevated); border: 1px solid var(--border); border-radius: 8px; padding: 9px 13px; font-size: 13px; font-weight: 600; margin-top: 14px; }
+  .scorecards { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+  .scard { flex: 1; min-width: 220px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; background: var(--surface); }
+  .stitle { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); }
+  .ssub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .card { flex: 1; min-width: 86px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; background: var(--surface); }
+  .card .l { font-size: 10px; color: var(--text3); }
+  .card .v { font-size: 17px; font-weight: 700; margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .card .r { font-size: 10px; font-weight: 600; }
+  .sev-summary { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sevchip { border-radius: 7px; padding: 5px 12px; font-size: 12px; font-weight: 700; }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }
+  .controls input, .controls select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; outline: none; }
+  .controls input { flex: 1; min-width: 120px; }
+  .fbtn { background: var(--elevated); color: var(--text2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; font-size: 11px; cursor: pointer; }
+  .fbtn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  details.fcard { border: 1px solid var(--border-subtle); border-left-width: 4px; border-radius: 8px; padding: 0; margin-bottom: 8px; background: var(--surface); }
+  details.fcard > summary { list-style: none; cursor: pointer; padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  details.fcard > summary::-webkit-details-marker { display: none; }
+  .ftitle { font-weight: 700; font-size: 13px; flex: 1; }
+  .fbadge { font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 20px; }
+  .fimpact-pill { font-size: 10px; color: var(--text3); font-variant-numeric: tabular-nums; }
+  .fbody { padding: 0 12px 11px; }
+  .fmeta { font-size: 10px; color: var(--text3); margin-bottom: 5px; }
+  .fdesc { font-size: 12px; color: var(--text2); }
+  .fimpact { font-size: 11px; color: var(--text2); margin-top: 6px; font-weight: 600; }
+  .ffix { font-size: 12px; color: #16a34a; margin-top: 6px; }
+  .risk { font-size: 9px; text-transform: uppercase; color: var(--text3); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+  .clabel { font-size: 9px; text-transform: uppercase; color: var(--text3); margin-top: 6px; }
+  .clabel.after { color: #10B981; }
+  pre { background: var(--elevated); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 8px 10px; overflow: auto; font-size: 11px; margin: 3px 0 0; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #1f1f23; }
-  th { color: #71717a; font-weight: 600; }
-  td.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .finding { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1f1f23; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
-  .ftitle { font-weight: 600; font-size: 13px; }
-  .sev { font-size: 9px; text-transform: uppercase; color: #71717a; margin-left: 4px; }
-  .fdesc { font-size: 12px; color: #a1a1aa; margin-top: 2px; }
-  .fix { font-size: 12px; color: #34d399; margin-top: 4px; }
-  pre { background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 8px; overflow: auto; font-size: 11px; }
-  .empty { color: #71717a; font-size: 13px; text-align: center; padding: 60px 0; }
-  footer { margin-top: 40px; color: #52525b; font-size: 11px; text-align: center; }
-  a { color: #818cf8; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); }
+  th { color: var(--text3); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .barwrap { display: inline-block; width: 64px; height: 5px; background: var(--elevated); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .bar { height: 5px; border-radius: 3px; }
+  .tag { font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
+  .fw { display: inline-block; background: var(--elevated); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 600; margin: 0 5px 5px 0; }
+  .fw.dev { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4); color: #fca5a5; }
+  .split { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .legend { font-size: 12px; }
+  .legend div { display: flex; align-items: center; gap: 7px; margin: 4px 0; }
+  .ldot { width: 11px; height: 11px; border-radius: 3px; }
+  .empty { color: var(--text3); font-size: 13px; text-align: center; padding: 60px 0; }
+  footer { margin-top: 40px; color: var(--text3); font-size: 11px; text-align: center; }
+  a { color: var(--brand2); }
 </style>
 </head>
 <body>
@@ -44,12 +85,194 @@
 <script>
 (function () {
   var SEV = { critical: '#EF4444', warning: '#F59E0B', info: '#3B82F6' };
+  var CWV = { lcp:[2500,4000], inp:[200,500], cls:[0.1,0.25], fcp:[1800,3000], ttfb:[800,1800] };
+  var state = { d: null, fSev: 'all', fCat: 'all', fSearch: '', sSort: 'mainThreadTime', sParty: 'all' };
 
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
   function ms(n){ if(n==null) return '—'; return n>=1000 ? (n/1000).toFixed(2)+'s' : Math.round(n)+'ms'; }
-  function kb(n){ return (n/1024).toFixed(1)+' KB'; }
+  function kb(n){ if(n==null) return '—'; return n>=1048576 ? (n/1048576).toFixed(1)+' MB' : (n/1024).toFixed(1)+' KB'; }
   function grade(s){ return s>=90?'A':s>=80?'B':s>=70?'C':s>=60?'D':'F'; }
-  function scoreColor(s){ return s>=80?'#10B981':s>=60?'#F59E0B':'#EF4444'; }
+  function healthColor(s){ return s>=80?'#10B981':s>=60?'#F59E0B':'#EF4444'; }
+  function lhColor(s){ return s==null?'#a1a1aa':s>=90?'#10B981':s>=50?'#F59E0B':'#EF4444'; }
+  function sevRank(s){ return s==='critical'?0:s==='warning'?1:2; }
+  function rate(val, good, poor){ if(val==null) return {l:'No data',c:'#a1a1aa'}; if(val<=good) return {l:'Good',c:'#10B981'}; if(val>=poor) return {l:'Poor',c:'#EF4444'}; return {l:'Needs work',c:'#F59E0B'}; }
+
+  function gauge(score, color, cap){
+    var r=42, c=2*Math.PI*r, off=c*(1-Math.max(0,Math.min(100,score||0))/100);
+    return '<svg width="100" height="100" viewBox="0 0 110 110">'
+      + '<circle cx="55" cy="55" r="'+r+'" fill="none" stroke="var(--border)" stroke-width="9"/>'
+      + '<circle cx="55" cy="55" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="9" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 55 55)"/>'
+      + '<text x="55" y="60" text-anchor="middle" font-size="27" font-weight="800" fill="'+color+'">'+(score==null?'–':score)+'</text>'
+      + '<text x="55" y="76" text-anchor="middle" font-size="9" fill="var(--text3)">'+esc(cap)+'</text></svg>';
+  }
+  function donut(first, third){
+    var total=(first+third)||1, r=38, c=2*Math.PI*r, acc=0, arcs='';
+    [{v:first,col:'#6366F1'},{v:third,col:'#F59E0B'}].forEach(function(s){
+      if(s.v<=0) return; var frac=s.v/total;
+      arcs += '<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+s.col+'" stroke-width="16" stroke-dasharray="'+(frac*c).toFixed(1)+' '+c.toFixed(1)+'" stroke-dashoffset="'+(-acc*c).toFixed(1)+'" transform="rotate(-90 50 50)"/>';
+      acc += frac;
+    });
+    return '<svg width="92" height="92" viewBox="0 0 100 100">'+arcs+'</svg>';
+  }
+
+  function vcard(label, valStr, val, good, poor){
+    var r = rate(val, good, poor);
+    return '<div class="card" style="border-top:3px solid '+r.c+'"><div class="l">'+label+'</div><div class="v">'+valStr+'</div><div class="r" style="color:'+r.c+'">'+r.l+'</div></div>';
+  }
+  function mcard(label, valStr, color){
+    return '<div class="card"><div class="l">'+esc(label)+'</div><div class="v" style="color:'+(color||'var(--text)')+'">'+valStr+'</div></div>';
+  }
+
+  function findingCard(f){
+    var color = SEV[f.severity] || '#888';
+    var ev = f.evidence || {};
+    var file = ev.file || ev.scriptUrl || '';
+    var evidence = [file, ev.functionName ? ev.functionName+'()' : ''].filter(Boolean).map(esc).join(' · ');
+    var imp = f.impact || {};
+    var impactBits = [
+      imp.frequency ? imp.frequency+'× occurrences' : '',
+      imp.totalDuration ? ms(imp.totalDuration)+' total' : '',
+      imp.coreWebVitalAffected ? 'affects '+esc(imp.coreWebVitalAffected) : '',
+      imp.estimatedUserImpact ? esc(imp.estimatedUserImpact)+' impact' : ''
+    ].filter(Boolean).join(' • ');
+    var rem = f.remediation;
+    var code = rem ? (rem.code || rem.codeExample) : null;
+    var codeHtml = code && (code.before || code.after)
+      ? (code.before ? '<div class="clabel">Before</div><pre class="mono">'+esc(code.before)+'</pre>' : '')
+        + (code.after ? '<div class="clabel after">After</div><pre class="mono">'+esc(code.after)+'</pre>' : '')
+      : '';
+    return '<details class="fcard" style="border-left-color:'+color+'">'
+      + '<summary><span class="ftitle">'+esc(f.patternName)+'</span>'
+      + (imp.totalDuration ? '<span class="fimpact-pill">'+ms(imp.totalDuration)+'</span>' : '')
+      + '<span class="fbadge" style="background:'+color+'22;color:'+color+'">'+esc(f.severity)+'</span></summary>'
+      + '<div class="fbody">'
+      + '<div class="fmeta">'+esc(f.category)+(typeof f.confidence==='number'?' · '+Math.round(f.confidence*100)+'% confidence':'')+(evidence?' · '+evidence:'')+'</div>'
+      + '<div class="fdesc">'+esc(f.description)+'</div>'
+      + (impactBits ? '<div class="fimpact">'+impactBits+'</div>' : '')
+      + (rem && rem.summary ? '<div class="ffix"><b>Fix:</b> '+esc(rem.summary)+(rem.riskLevel?' <span class="risk">'+esc(rem.riskLevel)+'</span>':'')+'</div>' : '')
+      + codeHtml
+      + '</div></details>';
+  }
+
+  function renderFindings(){
+    var list = state.d.findings || [];
+    var q = state.fSearch.toLowerCase();
+    var rows = list.filter(function(f){
+      if(state.fSev!=='all' && f.severity!==state.fSev) return false;
+      if(state.fCat!=='all' && f.category!==state.fCat) return false;
+      if(q){ var hay=(f.patternName+' '+f.description+' '+((f.evidence&&f.evidence.file)||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      return true;
+    }).sort(function(a,b){ return sevRank(a.severity)-sevRank(b.severity) || ((b.impact&&b.impact.totalDuration)||0)-((a.impact&&a.impact.totalDuration)||0); });
+    var el = document.getElementById('findings');
+    if(el) el.innerHTML = rows.length ? rows.map(findingCard).join('') : '<div class="muted">No findings match these filters.</div>';
+  }
+
+  function scriptRow(s, maxMt){
+    var mt = s.mainThreadTime||0, pct = maxMt>0 ? (mt/maxMt)*100 : 0;
+    var third = (s.classification||'').indexOf('third-party')===0;
+    var cls = third?'3P':(s.classification==='inline'?'IN':'1P'), clsColor = third?'#F59E0B':'#6366F1';
+    var barColor = mt>=250?'#EF4444':mt>=80?'#F59E0B':'#10B981';
+    var name = s.url; try { var u=new URL(s.url); name = u.pathname.split('/').filter(Boolean).pop()||u.hostname; } catch(e){}
+    return '<tr><td><span class="tag" style="background:'+clsColor+'22;color:'+clsColor+'">'+cls+'</span> <span class="mono" title="'+esc(s.url)+'">'+esc(name)+'</span></td>'
+      + '<td class="n"><span class="barwrap"><span class="bar" style="width:'+pct.toFixed(0)+'%;background:'+barColor+'"></span></span>'+ms(mt)+'</td>'
+      + '<td class="n">'+(s.longTaskCount||0)+'</td><td class="n">'+kb(s.transferSize)+'</td></tr>';
+  }
+
+  function renderScripts(){
+    var arr = (state.d.scripts||[]).slice().filter(function(s){
+      var third = (s.classification||'').indexOf('third-party')===0;
+      if(state.sParty==='first') return !third; if(state.sParty==='third') return third; return true;
+    });
+    var key = state.sSort;
+    arr.sort(function(a,b){ return (b[key]||0)-(a[key]||0); });
+    var maxMt = arr.reduce(function(m,s){ return Math.max(m, s.mainThreadTime||0); }, 0);
+    var el = document.getElementById('scriptsBody');
+    if(el) el.innerHTML = arr.length ? arr.map(function(s){ return scriptRow(s, maxMt); }).join('') : '<tr><td colspan="4" class="muted">No scripts.</td></tr>';
+  }
+
+  function render(d){
+    state.d = d;
+    var v = d.vitals || {};
+    var lh = (d.lighthouseScore===undefined?null:d.lighthouseScore);
+    var crit = (d.findings||[]).filter(function(f){return f.severity==='critical';}).length;
+    var warn = (d.findings||[]).filter(function(f){return f.severity==='warning';}).length;
+    var info = (d.findings||[]).filter(function(f){return f.severity==='info';}).length;
+    var firstMt = (d.scripts||[]).filter(function(s){return (s.classification||'').indexOf('third-party')!==0;}).reduce(function(a,s){return a+(s.mainThreadTime||0);},0);
+    var thirdMt = (d.scripts||[]).filter(function(s){return (s.classification||'').indexOf('third-party')===0;}).reduce(function(a,s){return a+(s.mainThreadTime||0);},0);
+    var cats = {}; (d.findings||[]).forEach(function(f){ cats[f.category]=1; });
+    var verdict = 'Health '+d.healthScore+'/100 (grade '+grade(d.healthScore)+')'+(lh!=null?' · est. Lighthouse '+lh:'')+(crit?' · '+crit+' critical issue'+(crit===1?'':'s'):'');
+
+    document.getElementById('app').innerHTML =
+      '<header><div class="brand"><div class="logo">P</div><div><h1>Perflex Report</h1><div class="sub">Shared session</div></div></div>'
+      + '<button class="toggle" id="themeBtn">◐ Theme</button></header>'
+      + '<div class="url">'+esc(d.url||'')+'</div>'
+      + '<div class="meta">Captured '+esc(new Date(d.generatedAt||Date.now()).toLocaleString())+(d.interactionCount?(' · '+d.interactionCount+' interactions'):'')+'</div>'
+      + '<div class="verdict">'+esc(verdict)+'</div>'
+      + '<div class="scorecards">'
+      +   '<div class="scard">'+gauge(d.healthScore, healthColor(d.healthScore), 'GRADE '+grade(d.healthScore))+'<div><div class="stitle">Perflex Health</div><div class="ssub">Composite quality score</div></div></div>'
+      +   '<div class="scard">'+gauge(lh, lhColor(lh), lh==null?'NO DATA':'ESTIMATE')+'<div><div class="stitle">Lighthouse (est.)</div><div class="ssub">Local estimate</div></div></div>'
+      + '</div>'
+      + '<h2>Core Web Vitals</h2><div class="grid">'
+      +   vcard('LCP', ms(v.lcp), v.lcp, CWV.lcp[0], CWV.lcp[1])
+      +   vcard('INP', ms(v.inp), v.inp, CWV.inp[0], CWV.inp[1])
+      +   vcard('CLS', (v.cls!=null?v.cls.toFixed(3):'—'), v.cls, CWV.cls[0], CWV.cls[1])
+      +   vcard('FCP', ms(v.fcp), v.fcp, CWV.fcp[0], CWV.fcp[1])
+      +   vcard('TTFB', ms(v.ttfb), v.ttfb, CWV.ttfb[0], CWV.ttfb[1])
+      + '</div>'
+      + '<h2>Key Metrics</h2><div class="grid">'
+      +   mcard('Total Blocking', ms(d.totalBlockingTime), d.totalBlockingTime>300?'#EF4444':d.totalBlockingTime>150?'#F59E0B':'#10B981')
+      +   mcard('JS Heap', kb(d.heapSize))
+      +   mcard('Requests', (d.networkRequestCount!=null?d.networkRequestCount:'—'))
+      +   mcard('Frame Drops', (d.frameDropRate!=null?Math.round(d.frameDropRate*100)+'%':'—'), d.frameDropRate>0.2?'#EF4444':d.frameDropRate>0.05?'#F59E0B':'#10B981')
+      +   mcard('FPS', (d.fps!=null?d.fps:'—'))
+      + '</div>'
+      + '<h2>Findings — '+(d.findings?d.findings.length:0)+' total</h2>'
+      + '<div class="sev-summary">'
+      +   '<div class="sevchip" style="background:'+SEV.critical+'22;color:'+SEV.critical+'">'+crit+' Critical</div>'
+      +   '<div class="sevchip" style="background:'+SEV.warning+'22;color:'+SEV.warning+'">'+warn+' Warning</div>'
+      +   '<div class="sevchip" style="background:'+SEV.info+'22;color:'+SEV.info+'">'+info+' Info</div>'
+      + '</div>'
+      + '<div class="controls">'
+      +   '<button class="fbtn active" data-sev="all">All</button>'
+      +   '<button class="fbtn" data-sev="critical">Critical</button>'
+      +   '<button class="fbtn" data-sev="warning">Warning</button>'
+      +   '<button class="fbtn" data-sev="info">Info</button>'
+      +   '<select id="catSel"><option value="all">All categories</option>'+Object.keys(cats).map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join('')+'</select>'
+      +   '<input id="findSearch" placeholder="Search findings…" />'
+      + '</div>'
+      + '<div id="findings"></div>'
+      + '<h2>Script Leaderboard</h2>'
+      + '<div class="controls">'
+      +   '<select id="sortSel"><option value="mainThreadTime">Sort: Main-thread</option><option value="longTaskCount">Sort: Long tasks</option><option value="transferSize">Sort: Transfer</option></select>'
+      +   '<select id="partySel"><option value="all">All parties</option><option value="first">First-party</option><option value="third">Third-party</option></select>'
+      + '</div>'
+      + '<table><thead><tr><th>Script</th><th class="n">Main-thread</th><th class="n">Tasks</th><th class="n">Transfer</th></tr></thead><tbody id="scriptsBody"></tbody></table>'
+      + '<h2>First-party vs Third-party Main-thread</h2>'
+      + '<div class="split">'+donut(firstMt, thirdMt)+'<div class="legend">'
+      +   '<div><span class="ldot" style="background:#6366F1"></span> First-party — '+ms(firstMt)+'</div>'
+      +   '<div><span class="ldot" style="background:#F59E0B"></span> Third-party — '+ms(thirdMt)+'</div>'
+      +   '<div class="muted" style="margin-top:4px">'+((firstMt+thirdMt)>0?Math.round(thirdMt/(firstMt+thirdMt)*100)+'% of main-thread time is third-party':'No attributed main-thread time')+'</div>'
+      + '</div></div>'
+      + (d.frameworks&&d.frameworks.length ? '<h2>Detected Frameworks</h2>'+d.frameworks.map(function(f){return '<span class="fw'+(f.devBuild?' dev':'')+'">'+esc(f.name)+(f.version?' '+esc(f.version):'')+(f.devBuild?' · DEV BUILD':'')+'</span>';}).join('') : '')
+      + '<footer>Generated by <a href="https://github.com/svemulapati/perflex">Perflex</a> · decoded entirely in your browser — nothing was uploaded. Lighthouse figures are local estimates.</footer>';
+
+    // Wire interactivity.
+    renderFindings();
+    renderScripts();
+    var tb = document.getElementById('themeBtn');
+    if(tb) tb.addEventListener('click', function(){ document.body.classList.toggle('light'); try{ localStorage.setItem('perflex-theme', document.body.classList.contains('light')?'light':'dark'); }catch(e){} });
+    Array.prototype.forEach.call(document.querySelectorAll('.fbtn[data-sev]'), function(b){
+      b.addEventListener('click', function(){
+        state.fSev = b.getAttribute('data-sev');
+        Array.prototype.forEach.call(document.querySelectorAll('.fbtn[data-sev]'), function(x){ x.classList.toggle('active', x===b); });
+        renderFindings();
+      });
+    });
+    var catSel = document.getElementById('catSel'); if(catSel) catSel.addEventListener('change', function(){ state.fCat=catSel.value; renderFindings(); });
+    var fs = document.getElementById('findSearch'); if(fs) fs.addEventListener('input', function(){ state.fSearch=fs.value; renderFindings(); });
+    var ss = document.getElementById('sortSel'); if(ss) ss.addEventListener('change', function(){ state.sSort=ss.value; renderScripts(); });
+    var ps = document.getElementById('partySel'); if(ps) ps.addEventListener('change', function(){ state.sParty=ps.value; renderScripts(); });
+  }
 
   function b64urlToBytes(str){
     var b = str.replace(/-/g,'+').replace(/_/g,'/');
@@ -70,49 +293,11 @@
     return JSON.parse(new TextDecoder().decode(jsonBytes));
   }
 
-  function render(d){
-    var app = document.getElementById('app');
-    var fwHtml = (d.frameworks||[]).map(function(f){
-      return '<span class="fw'+(f.devBuild?' dev':'')+'">'+esc(f.name)+(f.version?(' '+esc(f.version)):'')+(f.devBuild?' · DEV':'')+'</span>';
-    }).join('');
-    var findingsHtml = (d.findings||[]).slice(0,40).map(function(f){
-      var rem = f.remediation;
-      var code = rem && rem.codeExample ? '<pre>'+esc('// before\n'+rem.codeExample.before+'\n// after\n'+rem.codeExample.after)+'</pre>' : '';
-      return '<div class="finding"><span class="dot" style="background:'+(SEV[f.severity]||'#888')+'"></span><div>'
-        + '<div class="ftitle">'+esc(f.patternName)+'<span class="sev">'+esc(f.severity)+' · '+esc(f.category)+'</span></div>'
-        + '<div class="fdesc">'+esc(f.description)+'</div>'
-        + (rem ? '<div class="fix">Fix ('+esc(rem.riskLevel)+'): '+esc(rem.summary)+'</div>'+code : '')
-        + '</div></div>';
-    }).join('');
-    var scriptsHtml = (d.scripts||[]).map(function(s){
-      return '<tr><td>'+esc(s.url)+'</td><td>'+esc(s.classification)+'</td><td class="n">'+ms(s.mainThreadTime)+'</td><td class="n">'+s.longTaskCount+'</td><td class="n">'+kb(s.transferSize)+'</td></tr>';
-    }).join('');
-    var v = d.vitals || {};
-
-    app.innerHTML =
-      '<header><div class="logo">P</div><h1>Perflex — Shared Session</h1></header>'
-      + '<div class="url">'+esc(d.url||'')+'</div>'
-      + '<div class="meta">Captured '+new Date(d.generatedAt||Date.now()).toLocaleString()+(d.interactionCount?(' · '+d.interactionCount+' interactions'):'')+'</div>'
-      + '<div class="score"><div class="badge" style="color:'+scoreColor(d.healthScore)+'">'+d.healthScore+' · '+grade(d.healthScore)+'</div>'
-      + '<div class="vitals">'
-      + '<div class="chip">LCP<b>'+ms(v.lcp)+'</b></div>'
-      + '<div class="chip">INP<b>'+ms(v.inp)+'</b></div>'
-      + '<div class="chip">CLS<b>'+(v.cls!=null?v.cls.toFixed(3):'—')+'</b></div>'
-      + '<div class="chip">TBT<b>'+ms(d.totalBlockingTime)+'</b></div>'
-      + '<div class="chip">Heap<b>'+(d.heapSize?(d.heapSize/1048576).toFixed(1)+' MB':'—')+'</b></div>'
-      + '</div></div>'
-      + (fwHtml ? '<h2>Frameworks</h2>'+fwHtml : '')
-      + '<h2>Findings ('+(d.findings?d.findings.length:0)+')</h2>'+(findingsHtml||'<div class="fdesc">No findings.</div>')
-      + '<h2>Scripts</h2><table><thead><tr><th>Script</th><th>Class</th><th class="n">Main-thread</th><th class="n">Tasks</th><th class="n">Transfer</th></tr></thead><tbody>'+(scriptsHtml||'')+'</tbody></table>'
-      + '<footer>Generated by <a href="https://github.com/svemulapati/perflex">Perflex</a> · data is decoded entirely in your browser — nothing was uploaded.</footer>';
-  }
-
-  function fail(msg){
-    document.getElementById('app').innerHTML = '<div class="empty">'+esc(msg)+'</div>';
-  }
+  function fail(msg){ document.getElementById('app').innerHTML = '<div class="empty">'+esc(msg)+'</div>'; }
 
   async function boot(){
     try {
+      try { if(localStorage.getItem('perflex-theme')==='light') document.body.classList.add('light'); } catch(e){}
       if (window.__PERFLEX_DATA__) { render(window.__PERFLEX_DATA__); return; }
       var hash = location.hash || '';
       var m = hash.match(/[#&]s=([^&]+)/);

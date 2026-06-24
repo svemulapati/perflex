@@ -1,4 +1,5 @@
 import type { CoreWebVitals, DetectedFramework, ExportBundle, PerformanceFinding } from '../types';
+import { estimateSpeedIndex, scorePerformance } from '../lighthouse-scoring';
 
 /**
  * Shareable session permalinks — privacy-preserving and backend-free.
@@ -9,7 +10,9 @@ import type { CoreWebVitals, DetectedFramework, ExportBundle, PerformanceFinding
  * inlined into a self-contained HTML file for fully offline sharing.
  */
 
-export const SHARE_VERSION = 1;
+// v2: precomputed Lighthouse score + request/frame metrics, and findings are
+// sanitized to a lean shape (no full URLs, no raw sampleEntries).
+export const SHARE_VERSION = 2;
 
 export interface ShareScript {
   url: string;
@@ -20,33 +23,96 @@ export interface ShareScript {
   transferSize: number;
 }
 
+/** Lean, sanitized finding safe to share (no full URLs / raw sample data). */
+export interface ShareFinding {
+  patternId: string;
+  patternName: string;
+  category: string;
+  severity: 'critical' | 'warning' | 'info';
+  confidence: number;
+  description: string;
+  evidence: { file: string; functionName?: string };
+  impact: { frequency: number; totalDuration: number; coreWebVitalAffected?: string; estimatedUserImpact?: string };
+  remediation?: { summary: string; riskLevel?: string; code?: { before: string; after: string; language: string } };
+}
+
 export interface SharePayload {
   v: number;
   url: string;
   generatedAt: number;
   healthScore: number;
+  lighthouseScore: number | null;
   vitals: CoreWebVitals;
   totalBlockingTime: number;
   heapSize: number;
   fps: number;
+  frameDropRate: number;
+  networkRequestCount: number;
   frameworks: DetectedFramework[];
   scripts: ShareScript[];
-  findings: PerformanceFinding[];
+  findings: ShareFinding[];
   interactionCount: number;
 }
 
-/** Build a compact, share-sized payload (drops heavy raw event arrays). */
+/** Filename (or host) for a URL — never the full URL (may carry tokens / PII). */
+function fileLabel(url: string | undefined): string {
+  if (!url || url === 'unknown' || url === '(inline)') return url || 'unknown';
+  try {
+    const u = new URL(url);
+    return u.pathname.split('/').filter(Boolean).pop() || u.hostname;
+  } catch {
+    return url.split('?')[0].split('/').pop() || url;
+  }
+}
+
+function toShareFinding(f: PerformanceFinding): ShareFinding {
+  const code = f.remediation?.codeExample;
+  return {
+    patternId: f.patternId,
+    patternName: f.patternName,
+    category: f.category,
+    severity: f.severity,
+    confidence: f.confidence,
+    description: f.description,
+    evidence: { file: fileLabel(f.evidence?.scriptUrl), functionName: f.evidence?.functionName },
+    impact: {
+      frequency: f.impact.frequency,
+      totalDuration: f.impact.totalDuration,
+      coreWebVitalAffected: f.impact.coreWebVitalAffected,
+      estimatedUserImpact: f.impact.estimatedUserImpact,
+    },
+    remediation: f.remediation
+      ? {
+          summary: f.remediation.summary,
+          riskLevel: f.remediation.riskLevel,
+          code: code ? { before: code.before, after: code.after, language: code.language } : undefined,
+        }
+      : undefined,
+  };
+}
+
+/** Build a compact, sanitized, share-sized payload (drops heavy raw arrays). */
 export function buildSharePayload(bundle: ExportBundle, generatedAt = Date.now()): SharePayload {
   const s = bundle.snapshot;
+  const lighthouse = scorePerformance({
+    fcp: s.vitals.fcp,
+    si: estimateSpeedIndex(s.vitals.fcp, s.totalBlockingTime),
+    lcp: s.vitals.lcp,
+    tbt: s.totalBlockingTime,
+    cls: s.vitals.cls,
+  });
   return {
     v: SHARE_VERSION,
     url: s.url,
     generatedAt,
     healthScore: s.healthScore,
+    lighthouseScore: lighthouse.score,
     vitals: s.vitals,
     totalBlockingTime: s.totalBlockingTime,
     heapSize: s.heapSize,
     fps: s.fps,
+    frameDropRate: s.frameDropRate,
+    networkRequestCount: s.networkRequestCount,
     frameworks: s.frameworks,
     scripts: s.scripts.slice(0, 25).map((p) => ({
       url: p.url,
@@ -56,7 +122,7 @@ export function buildSharePayload(bundle: ExportBundle, generatedAt = Date.now()
       longTaskCount: p.metrics.longTaskCount,
       transferSize: p.metrics.totalTransferSize,
     })),
-    findings: s.findings,
+    findings: s.findings.slice(0, 80).map(toShareFinding),
     interactionCount: s.interactions.length,
   };
 }
