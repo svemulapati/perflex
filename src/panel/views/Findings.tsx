@@ -38,7 +38,7 @@ export function Findings() {
   }, [snapshot]);
 
   return (
-    <div className="flex flex-col gap-3 p-3">
+    <div className="contain-content flex flex-col gap-3 p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-200">Findings</h2>
         <div className="flex gap-2 text-[10px]">

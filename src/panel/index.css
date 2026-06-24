@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /*
+   * Layout/paint/style containment. Tells the browser that changes inside a
+   * tab panel or card can't affect anything outside it, so it can skip
+   * re-laying-out the rest of the panel on every snapshot update (B.3).
+   * `content` deliberately excludes size containment, so heights still grow
+   * with content.
+   */
+  .contain-content {
+    contain: content;
+  }
+}
+
 :root {
   color-scheme: dark;
 }

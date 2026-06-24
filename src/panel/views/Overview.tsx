@@ -1,3 +1,4 @@
+import { useDeferredValue } from 'react';
 import { useSessionStore } from '../stores/session-store';
 import { HealthScore } from '../components/HealthScore';
 import { MetricBadge } from '../components/MetricBadge';
@@ -18,6 +19,9 @@ function vitalStatus(value: number | null, good: number, poor: number): Status {
 export function Overview() {
   const snapshot = useSessionStore((s) => s.snapshot);
   const meta = useSessionStore((s) => s.meta);
+  // Deferred copy for the heavier secondary sections. Called before any early
+  // return so the hook order stays stable.
+  const deferred = useDeferredValue(snapshot);
 
   if (!snapshot) {
     return (
@@ -28,10 +32,13 @@ export function Overview() {
   }
 
   const v: CoreWebVitals = snapshot.vitals;
-  const topOffenders = snapshot.scripts.filter((s) => s.metrics.totalMainThreadTime > 0).slice(0, 3);
+  // Let the health score + Core Web Vitals (critical) paint first; the heavier
+  // secondary sections read a deferred snapshot so they can't block them (B.3).
+  const secondary = deferred ?? snapshot;
+  const topOffenders = secondary.scripts.filter((s) => s.metrics.totalMainThreadTime > 0).slice(0, 3);
 
   return (
-    <div className="flex flex-col gap-4 p-3">
+    <div className="contain-content flex flex-col gap-4 p-3">
       <div className="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
         <HealthScore score={snapshot.healthScore} />
         <div className="flex-1">
@@ -92,10 +99,10 @@ export function Overview() {
           Key Metrics
         </h3>
         <div className="grid grid-cols-2 gap-1.5">
-          <MetricBadge label="Total Blocking" value={ms(snapshot.totalBlockingTime)} status={snapshot.totalBlockingTime > 300 ? 'poor' : snapshot.totalBlockingTime > 150 ? 'warn' : 'good'} />
-          <MetricBadge label="JS Heap" value={bytes(snapshot.heapSize)} />
-          <MetricBadge label="Requests" value={String(snapshot.networkRequestCount)} />
-          <MetricBadge label="Frame Drops" value={`${(snapshot.frameDropRate * 100).toFixed(0)}%`} status={snapshot.frameDropRate > 0.2 ? 'poor' : snapshot.frameDropRate > 0.05 ? 'warn' : 'good'} />
+          <MetricBadge label="Total Blocking" value={ms(secondary.totalBlockingTime)} status={secondary.totalBlockingTime > 300 ? 'poor' : secondary.totalBlockingTime > 150 ? 'warn' : 'good'} />
+          <MetricBadge label="JS Heap" value={bytes(secondary.heapSize)} />
+          <MetricBadge label="Requests" value={String(secondary.networkRequestCount)} />
+          <MetricBadge label="Frame Drops" value={`${(secondary.frameDropRate * 100).toFixed(0)}%`} status={secondary.frameDropRate > 0.2 ? 'poor' : secondary.frameDropRate > 0.05 ? 'warn' : 'good'} />
         </div>
       </section>
 
@@ -131,11 +138,11 @@ export function Overview() {
         <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
           Recent Findings
         </h3>
-        {snapshot.findings.length === 0 ? (
+        {secondary.findings.length === 0 ? (
           <div className="text-[11px] text-zinc-500">No findings yet.</div>
         ) : (
           <div className="flex flex-col gap-1">
-            {snapshot.findings.slice(0, 5).map((f) => (
+            {secondary.findings.slice(0, 5).map((f) => (
               <div
                 key={f.id}
                 className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/40 px-2 py-1.5"

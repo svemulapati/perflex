@@ -93,7 +93,7 @@ export function Settings() {
   };
 
   return (
-    <div className="flex flex-col gap-5 p-3 text-zinc-200">
+    <div className="contain-content flex flex-col gap-5 p-3 text-zinc-200">
       {/* AI remediation */}
       <Section title="AI Remediation (Claude)">
         <p className="text-[11px] text-zinc-400">

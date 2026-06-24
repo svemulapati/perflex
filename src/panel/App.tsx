@@ -1,13 +1,27 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSessionStore } from './stores/session-store';
 import { useSettingsStore } from './stores/settings-store';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Overview } from './views/Overview';
-import { Scripts } from './views/Scripts';
-import { Timeline } from './views/Timeline';
-import { Findings } from './views/Findings';
-import { Settings } from './views/Settings';
 import { shortUrl } from './format';
+
+// Code-split each tab into its own chunk: a view's JS only loads the first time
+// that tab is opened, keeping the initial panel bundle small (B.3 / B.4).
+const Overview = lazy(() => import('./views/Overview').then((m) => ({ default: m.Overview })));
+const Scripts = lazy(() => import('./views/Scripts').then((m) => ({ default: m.Scripts })));
+const Timeline = lazy(() => import('./views/Timeline').then((m) => ({ default: m.Timeline })));
+const Findings = lazy(() => import('./views/Findings').then((m) => ({ default: m.Findings })));
+const Settings = lazy(() => import('./views/Settings').then((m) => ({ default: m.Settings })));
+
+/** Lightweight skeleton shown while a tab's chunk loads (no spinner — spec C.3). */
+function TabSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 p-3" aria-hidden>
+      <div className="h-16 animate-pulse rounded-lg bg-zinc-900" />
+      <div className="h-8 w-1/2 animate-pulse rounded bg-zinc-900" />
+      <div className="h-24 animate-pulse rounded-lg bg-zinc-900" />
+    </div>
+  );
+}
 
 type Tab = 'overview' | 'scripts' | 'timeline' | 'findings' | 'settings';
 
@@ -102,11 +116,13 @@ export function App() {
           <div className="px-3 py-2 text-[11px] text-zinc-500">Connecting to page…</div>
         )}
         <ErrorBoundary label={tab}>
-          {tab === 'overview' && <Overview />}
-          {tab === 'scripts' && <Scripts />}
-          {tab === 'timeline' && <Timeline />}
-          {tab === 'findings' && <Findings />}
-          {tab === 'settings' && <Settings />}
+          <Suspense fallback={<TabSkeleton />}>
+            {tab === 'overview' && <Overview />}
+            {tab === 'scripts' && <Scripts />}
+            {tab === 'timeline' && <Timeline />}
+            {tab === 'findings' && <Findings />}
+            {tab === 'settings' && <Settings />}
+          </Suspense>
         </ErrorBoundary>
       </main>
     </div>
