@@ -8,6 +8,9 @@ import { shortUrl } from './format';
 // that tab is opened, keeping the initial panel bundle small (B.3 / B.4).
 const Overview = lazy(() => import('./views/Overview').then((m) => ({ default: m.Overview })));
 const Scripts = lazy(() => import('./views/Scripts').then((m) => ({ default: m.Scripts })));
+const NetworkWaterfall = lazy(() =>
+  import('./views/NetworkWaterfall').then((m) => ({ default: m.NetworkWaterfall }))
+);
 const Timeline = lazy(() => import('./views/Timeline').then((m) => ({ default: m.Timeline })));
 const Findings = lazy(() => import('./views/Findings').then((m) => ({ default: m.Findings })));
 const Settings = lazy(() => import('./views/Settings').then((m) => ({ default: m.Settings })));
@@ -23,11 +26,12 @@ function TabSkeleton() {
   );
 }
 
-type Tab = 'overview' | 'scripts' | 'timeline' | 'findings' | 'settings';
+type Tab = 'overview' | 'scripts' | 'network' | 'timeline' | 'findings' | 'settings';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'scripts', label: 'Scripts' },
+  { id: 'network', label: 'Network' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'findings', label: 'Findings' },
   { id: 'settings', label: 'Settings' },
@@ -119,6 +123,7 @@ export function App() {
           <Suspense fallback={<TabSkeleton />}>
             {tab === 'overview' && <Overview />}
             {tab === 'scripts' && <Scripts />}
+            {tab === 'network' && <NetworkWaterfall />}
             {tab === 'timeline' && <Timeline />}
             {tab === 'findings' && <Findings />}
             {tab === 'settings' && <Settings />}

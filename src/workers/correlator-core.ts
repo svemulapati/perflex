@@ -391,6 +391,13 @@ export class Correlator {
             url: event.url,
             initiatorType: event.initiatorType,
             status: event.responseStatus,
+            dns: event.dns,
+            tcp: event.tcp,
+            tls: event.tls,
+            ttfb: event.ttfb,
+            download: event.download,
+            transferSize: event.transferSize,
+            renderBlocking: event.renderBlockingStatus === 'blocking',
           },
           TIMELINE_CAP
         );

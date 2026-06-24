@@ -333,6 +333,14 @@ export interface TimelineNetwork {
   url: string;
   initiatorType: string;
   status?: number;
+  // Timing-phase breakdown + size for the network waterfall (Feature 6).
+  dns: number;
+  tcp: number;
+  tls: number;
+  ttfb: number;
+  download: number;
+  transferSize: number;
+  renderBlocking?: boolean;
 }
 export interface TimelineShift {
   time: number;
