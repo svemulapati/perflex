@@ -5,9 +5,17 @@ import type {
   PerformanceFinding,
   ScriptProfile,
   SessionSnapshot,
+  TimelineNetwork,
 } from '../types';
 import { CWV_THRESHOLDS } from '../constants';
-import { estimateSpeedIndex, scoreBand, scorePerformance } from '../lighthouse-scoring';
+import {
+  estimateSpeedIndex,
+  rankOpportunities,
+  scoreBand,
+  scorePerformance,
+  type LighthouseMetrics,
+} from '../lighthouse-scoring';
+import { PHASE_META, RESOURCE_TYPE_LABEL, categorizeResource, fileName, waterfallSegments } from '../waterfall';
 
 function ms(n: number | null): string {
   if (n === null || n === undefined) return '—';
@@ -152,6 +160,7 @@ function scriptRow(s: ScriptProfile, maxMt: number): string {
     <td class="n">${ms(s.metrics.maxLongTaskDuration)}</td>
     <td class="n">${kb(s.metrics.totalTransferSize)}</td>
     <td class="n">${s.metrics.forcedReflowCount}</td>
+    <td>${sparkline(s.timeSeries)}</td>
   </tr>`;
 }
 
@@ -177,6 +186,87 @@ function interactionsBlock(interactions: InteractionSession[]): string {
   <div class="muted" style="margin-top:6px">Worst: <b>${esc(worst.trigger.type)}</b> on ${esc(worst.trigger.target)} — health ${worst.health}, ${ms(worst.duration)}.</div>`;
 }
 
+/** Tiny inline SVG sparkline from a per-script time series. */
+function sparkline(data: number[], w = 70, h = 16): string {
+  if (!data || data.length < 2) return '<span class="muted">—</span>';
+  const max = Math.max(...data, 1);
+  const step = w / (data.length - 1);
+  const pts = data.map((d, i) => `${(i * step).toFixed(1)},${(h - (d / max) * h).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${BRAND}" stroke-width="1.5"/></svg>`;
+}
+
+/** Compact network waterfall — top requests by start time, phase-colored. */
+function miniWaterfall(network: TimelineNetwork[], tlStart: number, span: number): string {
+  if (!network.length) return '<div class="muted">No network requests captured.</div>';
+  const rows = [...network].sort((a, b) => a.start - b.start).slice(0, 20);
+  const legend = PHASE_META.map(
+    (p) => `<span class="wlg"><span class="wdot" style="background:${p.color}"></span>${p.label}</span>`
+  ).join('');
+  const body = rows
+    .map((n) => {
+      const segs = waterfallSegments(n);
+      let acc = ((n.start - tlStart) / span) * 100;
+      const bars = segs
+        .map((seg) => {
+          const wd = (seg.ms / span) * 100;
+          const left = acc;
+          acc += wd;
+          return `<span class="wseg" style="left:${left.toFixed(1)}%;width:${Math.max(wd, 0.4).toFixed(1)}%;background:${seg.color}"></span>`;
+        })
+        .join('');
+      const type = RESOURCE_TYPE_LABEL[categorizeResource(n.initiatorType, n.url)];
+      return `<div class="wrow"><span class="wtag">${type}</span><span class="wname mono">${esc(fileName(n.url))}</span><span class="wdur">${ms(n.duration)}</span><span class="wtrack">${bars}</span></div>`;
+    })
+    .join('');
+  const more = network.length - rows.length;
+  return `<div class="wlegend">${legend}</div>${body}${more > 0 ? `<div class="muted">+ ${more} more request${more === 1 ? '' : 's'}.</div>` : ''}`;
+}
+
+const STEP_COLOR: Record<string, string> = {
+  trigger: BRAND,
+  longtask: '#EF4444',
+  network: '#60a5fa',
+  mutation: '#a1a1aa',
+  reflow: '#fb923c',
+  'layout-shift': '#F59E0B',
+};
+
+/** Worst interaction's causal chain as a stepped timeline (uniquely Perflex). */
+function causalChainBlock(interactions: InteractionSession[]): string {
+  if (!interactions.length) return '<div class="muted">No interactions recorded.</div>';
+  const worst = [...interactions].sort((a, b) => a.health - b.health)[0];
+  const head = `<div class="muted" style="margin-bottom:6px"><b>${esc(worst.trigger.type)}</b> on ${esc(worst.trigger.target)} — health ${worst.health}, ${ms(worst.duration)}</div>`;
+  if (!worst.causalChain?.length) return head + '<div class="muted">No causal steps captured.</div>';
+  const steps = worst.causalChain
+    .map(
+      (s) =>
+        `<div class="cstep"><span class="cdot" style="background:${STEP_COLOR[s.kind] ?? '#a1a1aa'}"></span><span class="clabel">${esc(s.label)}</span><span class="coff">+${Math.round(s.offset)}ms${s.duration ? ` · ${ms(s.duration)}` : ''}</span></div>`
+    )
+    .join('');
+  return head + `<div class="cchain">${steps}</div>`;
+}
+
+/** Top fixes ranked by estimated Lighthouse-score gain (Feature 7 reuse). */
+function opportunitiesBlock(metrics: LighthouseMetrics, baseScore: number | null, findings: PerformanceFinding[]): string {
+  if (baseScore === null) return '';
+  const { ranked, fixAllScore } = rankOpportunities(
+    metrics,
+    baseScore,
+    findings.map((f) => ({ coreWebVitalAffected: f.impact.coreWebVitalAffected, category: f.category, totalDuration: f.impact.totalDuration, finding: f }))
+  );
+  if (!ranked.length) return '';
+  const rows = ranked
+    .slice(0, 5)
+    .map(
+      (o) =>
+        `<div class="orow"><span class="oname">Fix ${esc(o.item.finding.patternName)}</span><span class="ogain">+${o.delta}</span></div>`
+    )
+    .join('');
+  return `<h2>Top Opportunities</h2><div class="muted" style="margin-bottom:6px">Estimated Lighthouse gain per fix.</div>${rows}${
+    fixAllScore > baseScore ? `<div class="orow oall"><span class="oname">Fix all</span><span class="ogain">→ ${fixAllScore}</span></div>` : ''
+  }`;
+}
+
 function verdict(snap: SessionSnapshot, lh: number | null): string {
   const crit = snap.findings.filter((f) => f.severity === 'critical').length;
   const parts: string[] = [];
@@ -196,13 +286,14 @@ export function buildReportHTML(bundle: ExportBundle, generatedAt = Date.now()):
   const v = snapshot.vitals;
 
   // Lighthouse estimate (reuses the Feature 7 scorer).
-  const lh = scorePerformance({
+  const lhMetrics: LighthouseMetrics = {
     fcp: v.fcp,
     si: estimateSpeedIndex(v.fcp, snapshot.totalBlockingTime),
     lcp: v.lcp,
     tbt: snapshot.totalBlockingTime,
     cls: v.cls,
-  });
+  };
+  const lh = scorePerformance(lhMetrics);
 
   const sevCounts = {
     critical: snapshot.findings.filter((f) => f.severity === 'critical').length,
@@ -283,6 +374,25 @@ export function buildReportHTML(bundle: ExportBundle, generatedAt = Date.now()):
   .legend { font-size:11px; }
   .legend div { display:flex; align-items:center; gap:6px; margin:3px 0; }
   .dot { width:10px; height:10px; border-radius:3px; }
+  .orow { display:flex; justify-content:space-between; align-items:center; border:1px solid #ececef; border-radius:7px; padding:7px 11px; margin-bottom:5px; break-inside:avoid; }
+  .orow .oname { font-size:12px; font-weight:600; }
+  .orow .ogain { font-family:ui-monospace,monospace; font-size:12px; font-weight:700; color:${SUCCESS}; }
+  .orow.oall { background:${BRAND}12; border-color:${BRAND}40; }
+  .orow.oall .ogain { color:${BRAND}; }
+  .wlegend { display:flex; gap:12px; margin-bottom:6px; font-size:10px; color:#71717a; }
+  .wlg { display:flex; align-items:center; gap:5px; }
+  .wdot { width:9px; height:9px; border-radius:2px; }
+  .wrow { display:flex; align-items:center; gap:8px; padding:2px 0; break-inside:avoid; }
+  .wtag { font-size:8px; font-weight:700; color:#71717a; width:30px; flex:0 0 auto; }
+  .wname { font-size:10px; width:150px; flex:0 0 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .wdur { font-family:ui-monospace,monospace; font-size:10px; color:#52525b; width:48px; text-align:right; flex:0 0 auto; }
+  .wtrack { position:relative; height:9px; flex:1; background:#f4f4f5; border-radius:3px; }
+  .wseg { position:absolute; top:0; height:9px; border-radius:2px; }
+  .cchain { border-left:2px solid #ececef; padding-left:12px; }
+  .cstep { display:flex; align-items:center; gap:8px; padding:3px 0; position:relative; }
+  .cdot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; margin-left:-17px; }
+  .clabel { font-size:11px; color:#3f3f46; flex:1; }
+  .coff { font-family:ui-monospace,monospace; font-size:10px; color:#a1a1aa; }
   footer { margin-top:26px; padding-top:10px; border-top:1px solid #ececef; font-size:10px; color:#a1a1aa; display:flex; justify-content:space-between; }
 </style></head><body>
   <header>
@@ -330,6 +440,8 @@ export function buildReportHTML(bundle: ExportBundle, generatedAt = Date.now()):
     ${metricCard('FPS', String(snapshot.fps))}
   </div>
 
+  ${opportunitiesBlock(lhMetrics, lh.score, snapshot.findings)}
+
   <h2>Findings — ${snapshot.findings.length} total</h2>
   <div class="sevbar">
     <div class="sevchip" style="background:${SEV.critical}1a;color:${SEV.critical}">${sevCounts.critical} Critical</div>
@@ -343,9 +455,12 @@ export function buildReportHTML(bundle: ExportBundle, generatedAt = Date.now()):
 
   <h2>Script Leaderboard</h2>
   <table>
-    <thead><tr><th>Script</th><th class="n">Main-thread</th><th class="n">Tasks</th><th class="n">Max task</th><th class="n">Transfer</th><th class="n">Reflows</th></tr></thead>
-    <tbody>${scripts.length ? scripts.map((s) => scriptRow(s, maxMt)).join('') : '<tr><td colspan="6" class="muted">No scripts captured.</td></tr>'}</tbody>
+    <thead><tr><th>Script</th><th class="n">Main-thread</th><th class="n">Tasks</th><th class="n">Max task</th><th class="n">Transfer</th><th class="n">Reflows</th><th>Trend</th></tr></thead>
+    <tbody>${scripts.length ? scripts.map((s) => scriptRow(s, maxMt)).join('') : '<tr><td colspan="7" class="muted">No scripts captured.</td></tr>'}</tbody>
   </table>
+
+  <h2>Network Waterfall</h2>
+  ${miniWaterfall(snapshot.timeline.network, snapshot.timeline.start, Math.max(1, snapshot.timeline.end - snapshot.timeline.start))}
 
   <h2>First-party vs Third-party Main-thread</h2>
   <div class="split">
@@ -366,8 +481,11 @@ export function buildReportHTML(bundle: ExportBundle, generatedAt = Date.now()):
   <h2>Interactions</h2>
   ${interactionsBlock(snapshot.interactions)}
 
+  <h2>Worst Interaction — Causal Chain</h2>
+  ${causalChainBlock(snapshot.interactions)}
+
   <footer>
-    <span>Generated by Perflex — perflex.dev</span>
+    <span>Generated by Perflex — <a href="https://github.com/svemulapati/perflex/issues" style="color:${BRAND}">report an issue</a></span>
     <span>Lighthouse figures are local estimates. Run Lighthouse for official scores.</span>
   </footer>
 </body></html>`;

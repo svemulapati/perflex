@@ -7,6 +7,7 @@ import {
   estimateSpeedIndex,
   metricForFinding,
   improveMetric,
+  rankOpportunities,
   type LighthouseMetric,
   type LighthouseMetrics,
 } from '../../src/shared/lighthouse-scoring';
@@ -101,5 +102,19 @@ describe('What-If mapping', () => {
     const m: LighthouseMetrics = { fcp: null, si: null, lcp: 100, tbt: null, cls: 0.2 };
     expect(improveMetric(m, 'lcp', 500).lcp).toBe(0);
     expect(improveMetric(m, 'cls', 9999).cls).toBeCloseTo(0.15, 5);
+  });
+
+  it('rankOpportunities sorts by gain and projects a fix-all score', () => {
+    const metrics: LighthouseMetrics = { fcp: 1800, si: 3000, lcp: 2500, tbt: 1000, cls: 0.1 };
+    const base = scorePerformance(metrics).score!;
+    const items = [
+      { coreWebVitalAffected: 'TBT', category: 'execution', totalDuration: 700, name: 'big' },
+      { coreWebVitalAffected: 'TBT', category: 'execution', totalDuration: 250, name: 'small' },
+    ];
+    const { ranked, fixAllScore } = rankOpportunities(metrics, base, items);
+    expect(ranked).toHaveLength(2);
+    expect(ranked[0].item.name).toBe('big'); // larger gain first
+    expect(ranked[0].delta).toBeGreaterThanOrEqual(ranked[1].delta);
+    expect(fixAllScore).toBeGreaterThanOrEqual(ranked[0].delta + base);
   });
 });

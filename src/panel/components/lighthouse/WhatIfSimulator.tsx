@@ -1,11 +1,6 @@
 import { useMemo } from 'react';
 import type { PerformanceFinding } from '@/shared/types';
-import {
-  improveMetric,
-  metricForFinding,
-  scorePerformance,
-  type LighthouseMetrics,
-} from '@/shared/lighthouse-scoring';
+import { rankOpportunities, type LighthouseMetrics } from '@/shared/lighthouse-scoring';
 
 interface WhatIfSimulatorProps {
   metrics: LighthouseMetrics;
@@ -20,21 +15,17 @@ interface WhatIfSimulatorProps {
  */
 export function WhatIfSimulator({ metrics, baseScore, findings }: WhatIfSimulatorProps) {
   const { items, fixAllScore } = useMemo(() => {
-    const ranked = findings
-      .map((f) => {
-        const metric = metricForFinding(f.impact.coreWebVitalAffected, f.category);
-        const projected = scorePerformance(improveMetric(metrics, metric, f.impact.totalDuration)).score;
-        return { finding: f, delta: (projected ?? baseScore) - baseScore };
-      })
-      .filter((x) => x.delta > 0)
-      .sort((a, b) => b.delta - a.delta)
-      .slice(0, 5);
-
-    const allFixed = findings.reduce(
-      (m, f) => improveMetric(m, metricForFinding(f.impact.coreWebVitalAffected, f.category), f.impact.totalDuration),
-      metrics
+    const { ranked, fixAllScore } = rankOpportunities(
+      metrics,
+      baseScore,
+      findings.map((f) => ({
+        coreWebVitalAffected: f.impact.coreWebVitalAffected,
+        category: f.category,
+        totalDuration: f.impact.totalDuration,
+        finding: f,
+      }))
     );
-    return { items: ranked, fixAllScore: scorePerformance(allFixed).score ?? baseScore };
+    return { items: ranked.slice(0, 5), fixAllScore };
   }, [metrics, baseScore, findings]);
 
   if (items.length === 0) {
@@ -43,7 +34,9 @@ export function WhatIfSimulator({ metrics, baseScore, findings }: WhatIfSimulato
 
   return (
     <div className="flex flex-col gap-1">
-      {items.map(({ finding, delta }) => (
+      {items.map(({ item, delta }) => {
+        const finding = item.finding;
+        return (
         <div
           key={finding.id}
           className="flex items-center justify-between gap-2 rounded border border-zinc-800 bg-zinc-900/40 px-2 py-1.5"
@@ -55,7 +48,8 @@ export function WhatIfSimulator({ metrics, baseScore, findings }: WhatIfSimulato
             +{delta}
           </span>
         </div>
-      ))}
+        );
+      })}
       {fixAllScore > baseScore && (
         <div className="mt-0.5 flex items-center justify-between gap-2 rounded bg-brand/10 px-2 py-1.5">
           <span className="text-[11px] font-semibold text-zinc-200">Fix all</span>

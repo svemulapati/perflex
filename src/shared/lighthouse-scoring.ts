@@ -149,6 +149,44 @@ export function metricForFinding(
   return 'tbt';
 }
 
+/** Minimal shape needed to rank a fix's Lighthouse impact. */
+export interface FindingLike {
+  coreWebVitalAffected?: string;
+  category: string;
+  totalDuration: number;
+}
+
+export interface Opportunity<T> {
+  item: T;
+  delta: number;
+}
+
+/**
+ * Rank fixes by estimated Lighthouse-score gain, and compute the projected
+ * score if everything were fixed. Shared by the Overview "What If" simulator and
+ * the PDF report so they can never disagree.
+ */
+export function rankOpportunities<T extends FindingLike>(
+  metrics: LighthouseMetrics,
+  baseScore: number,
+  items: T[]
+): { ranked: Opportunity<T>[]; fixAllScore: number } {
+  const ranked = items
+    .map((item) => {
+      const metric = metricForFinding(item.coreWebVitalAffected, item.category);
+      const projected = scorePerformance(improveMetric(metrics, metric, item.totalDuration)).score ?? baseScore;
+      return { item, delta: projected - baseScore };
+    })
+    .filter((o) => o.delta > 0)
+    .sort((a, b) => b.delta - a.delta);
+
+  const allFixed = items.reduce(
+    (m, it) => improveMetric(m, metricForFinding(it.coreWebVitalAffected, it.category), it.totalDuration),
+    metrics
+  );
+  return { ranked, fixAllScore: scorePerformance(allFixed).score ?? baseScore };
+}
+
 /**
  * Apply an estimated fix to one metric and return new metrics. Time-based
  * metrics shed the finding's wasted milliseconds (clamped at 0); CLS isn't a
