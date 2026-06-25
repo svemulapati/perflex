@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import logoUrl from '@/assets/icons/icon-128.png';
 import { HealthScore } from '../panel/components/HealthScore';
 
 interface PopupMeta {
@@ -59,9 +60,7 @@ export function Popup() {
     <div className="flex flex-col gap-3 bg-zinc-950 p-3 text-zinc-100">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-brand text-xs font-bold text-white">
-            P
-          </div>
+          <img src={logoUrl} alt="Perflex" className="h-5 w-5" />
           <span className="text-sm font-bold">Perflex</span>
         </div>
         {meta.throttleLevel !== 'none' && (

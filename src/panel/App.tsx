@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import logoUrl from '@/assets/icons/icon-128.png';
 import { useSessionStore } from './stores/session-store';
 import { useSettingsStore } from './stores/settings-store';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -64,9 +65,7 @@ export function App() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-brand text-sm font-bold text-white">
-            P
-          </div>
+          <img src={logoUrl} alt="Perflex" className="h-6 w-6" />
           <div>
             <div className="text-sm font-bold leading-none">Perflex</div>
             <div className="max-w-[180px] truncate text-[10px] text-zinc-500" title={url}>
