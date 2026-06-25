@@ -27,6 +27,16 @@ A free, open-source, privacy-first alternative to Lighthouse, the Chrome DevTool
 
 > **TL;DR** — Open the side panel, use your site normally, and Perflex shows you a ranked leaderboard of the scripts and **functions** eating your main thread, a zoomable timeline of every interaction, and a queue of concrete performance fixes (with before/after code) that are safe for your UI and business logic. Optionally, ask Claude for a contextual fix on any finding.
 
+## 🆕 New: AI Coach · Network Waterfall · Lighthouse estimate · Third-Party dashboard
+
+The latest source adds a major round of features *(build from source to try them today — a Chrome Web Store update is on the way)*:
+
+- 🤖 **AI Performance Coach** — a conversational **Coach** tab that can see your whole session. Ask *"why is this page slow?"* or *"what should I fix first?"* and get specific, data-backed answers (with before/after code), streamed in real time. Works with **Claude** *or* **Google Gemini's free tier** — bring whichever key you have.
+- 🌊 **Network Waterfall** — a dedicated, **virtualized** waterfall (stays smooth at 500+ requests) with color-coded timing phases (DNS/TCP/TLS/TTFB/Download), render-blocking & cache/Service-Worker indicators, and type / first-vs-third-party / search filters.
+- 💡 **Lighthouse Score Predictor** — a local, zero-network estimate of your Lighthouse performance score next to the health score, plus a **"What If"** simulator that ranks each finding by the points fixing it would gain.
+- 🧩 **Third-Party Impact Dashboard** — every third party grouped by vendor (Google Analytics, GTM, Stripe, Intercom…), each with its main-thread / transfer / request tax, and a **"what if I removed this?"** simulator showing the Lighthouse points and CLS you'd reclaim.
+- 📄 **Editorial exports** — a fully redesigned **PDF report** (SVG gauges, color-rated Core Web Vitals, a mini network waterfall, the worst interaction's causal chain, and before/after code) and an **interactive shareable HTML** viewer (filter / search / sort findings, light & dark themes).
+
 ## 🎯 What is Perflex?
 
 Most performance tools tell you *that* your page is slow. Perflex tells you **exactly what to change.**
@@ -44,10 +54,13 @@ Everything runs **locally in your browser**. No account, no data leaves your mac
 - 🩺 **37 anti-pattern detectors** across Loading, Execution, Rendering, Network, Third-party, and **Framework** — layout thrashing, render-blocking scripts, synchronous XHR, redundant fetches, oversized/uncompressed payloads, unbounded list rendering, excessive DOM size, timer flooding, third-party main-thread domination, and more.
 - ⚛️ **Framework-aware** — detects React, Vue, Angular, Next.js, Nuxt, Preact, and jQuery, and flags the costly mistakes: a **development build shipped to production** (reliably detected for React via the DevTools `bundleType`), **multiple UI frameworks** loaded on one page, and **outdated major versions**.
 - 🛠️ **Business-safe remediation** — every finding ships with a fix: a one-line summary, before/after code diff, **risk level** (safe / verify / review), validation steps, and an explicit business-safety note.
-- 🤖 **AI remediation (opt-in)** — bring your own **Claude API key** for contextual, code-specific fixes. Only a sanitized summary (filename + function + metrics) is ever sent — never URLs with tokens, request bodies, or page content.
+- 🤖 **AI remediation & Coach (opt-in)** — bring your own **Claude** *or* free **Google Gemini** API key for contextual, code-specific fixes on any finding, plus a conversational **Coach** that analyzes your whole session. Only a sanitized, anonymized summary is ever sent — never URLs with tokens, request bodies, or page content.
+- 💡 **Lighthouse estimate & "What If"** — a local estimate of your Lighthouse performance score, with a simulator that ranks fixes by the score points each would recover.
+- 🌊 **Network waterfall** — a virtualized, phase-colored request waterfall (DNS/TCP/TLS/TTFB/Download) with render-blocking, cache, and third-party indicators and rich filtering.
+- 🧩 **Third-party dashboard** — vendors ranked by their performance tax, with a "remove this vendor" simulator that recomputes your score.
 - 🪶 **Near-zero overhead** — a self-monitoring **circuit breaker** measures Perflex's own cost and automatically throttles if it ever exceeds 2% of the frame budget.
 - 🧩 **In-page overlay** — a draggable, Shadow-DOM-isolated HUD (`Ctrl+Shift+X`) showing live FPS, heap, long tasks, and throttle state on any page.
-- 📤 **Export everything** — **JSON**, **HAR** (extended with a `_perflex` namespace), **OpenTelemetry/OTLP traces** (for Jaeger / Tempo / Datadog), and a printable **PDF report**. Plus "Copy as Markdown / JSON" for any finding (drop straight into a Jira / GitHub issue).
+- 📤 **Export everything** — **JSON**, **HAR** (extended with a `_perflex` namespace), **OpenTelemetry/OTLP traces** (for Jaeger / Tempo / Datadog), and a redesigned, printable **PDF report** with gauges, charts, and code. Plus "Copy as Markdown / JSON" for any finding (drop straight into a Jira / GitHub issue).
 - 🔗 **Shareable permalinks** — share a read-only snapshot of a session as a **permalink** (the whole session is gzip-compressed into the URL fragment — never uploaded) or as a **self-contained HTML file** that opens offline with no extension or server.
 - 🔒 **100% local & private** — no servers, no telemetry, no account.
 
@@ -104,11 +117,13 @@ Then load it:
 ## 🧭 Using it
 
 1. **Open the side panel** and interact with your page normally (click, scroll, navigate).
-2. **Overview** → health score, Core Web Vitals, top offenders.
-3. **Scripts** → the leaderboard; click a row to see its hottest functions.
-4. **Timeline** → scroll to zoom, drag to pan; click an interaction for its causal chain.
-5. **Findings** → ranked issues; click **View fix** for the remediation, **Copy MD** to paste into a ticket, or **AI Analysis** for a contextual fix.
-6. **Settings** → add a Claude API key, set first-party domains, and **export** the session.
+2. **Overview** → health score, **Lighthouse estimate** + "What If" simulator, Core Web Vitals, top offenders.
+3. **Scripts** → the leaderboard (click a row for its hottest functions), or switch to the **Third Parties** sub-view for the vendor dashboard + removal simulator.
+4. **Network** → the virtualized waterfall with phase-colored timing bars and filters.
+5. **Timeline** → scroll to zoom, drag to pan; click an interaction for its causal chain.
+6. **Findings** → ranked issues; click **View fix**, **Copy MD** to paste into a ticket, or **AI Analysis** for a contextual fix.
+7. **Coach** → chat with an AI that can see your whole session (needs a Claude or Gemini key).
+8. **Settings** → pick an AI provider (Claude or free Gemini) and add a key, set first-party domains, and **export** the session.
 
 > Press **`Ctrl+Shift+X`** on any page to toggle the live in-page overlay.
 
@@ -162,16 +177,16 @@ Six layers, designed so measurement never contaminates the page or the main thre
 
 1. **Collector** — captures everything in the page's MAIN world with a fixed-size ring buffer and stack **fingerprinting** (FNV-1a hash, never full stack strings in the hot path).
 2. **Correlator** (Web Worker) — fuses events into per-script / per-function profiles, Core Web Vitals, and interaction sessions.
-3. **Analyzer** (Web Worker) — runs the 30 anti-pattern matchers.
-4. **Remediation** — template fixes for every pattern, plus optional Claude API.
-5. **Reporter** — the React side panel + in-page overlay.
-6. **Export** — JSON / HAR / OpenTelemetry / PDF.
+3. **Analyzer** (Web Worker) — runs the 37 anti-pattern matchers and the local Lighthouse-score estimator.
+4. **Remediation & Coach** — template fixes for every pattern, plus optional Claude or Google Gemini for contextual fixes and conversational coaching.
+5. **Reporter** — the React side panel (Overview · Scripts/Third-Parties · Network · Timeline · Findings · Coach · Settings) + in-page overlay.
+6. **Export** — JSON / HAR / OpenTelemetry / redesigned PDF / interactive HTML.
 
 All heavy lifting happens off the main thread in a worker, so Perflex's own measurements stay clean.
 
 ### Tech stack
 
-`Manifest V3` · `TypeScript (strict)` · `React 18` · `Vite + CRXJS` · `Zustand` · `Web Workers` · `D3` · `Tailwind CSS` · `Vitest` · `Claude API`
+`Manifest V3` · `TypeScript (strict)` · `React 18` · `Vite + CRXJS` · `Zustand` · `Web Workers` · `D3` · `@tanstack/react-virtual` · `Tailwind CSS` · `Vitest` · `Claude API` · `Google Gemini API`
 
 ## 🛠️ Development
 
@@ -188,8 +203,8 @@ npm run build        # production build → dist/
 src/
 ├── content/          # collector (MAIN world) + bridge + overlay
 ├── workers/          # correlator + analyzer
-├── shared/           # types, anti-patterns, remediation templates, exporters, AI client
-├── panel/            # React side panel (Overview / Scripts / Timeline / Findings / Settings)
+├── shared/           # types, anti-patterns, remediation, exporters, AI client (Claude + Gemini), Lighthouse + third-party impact
+├── panel/            # React side panel (Overview · Scripts/Third-Parties · Network · Timeline · Findings · Coach · Settings)
 ├── popup/            # quick-glance popup
 └── background/       # service worker (routing + CSP-proof injection)
 ```
@@ -200,7 +215,9 @@ Perflex is built to be invisible: target **<0.5ms per event**, a bounded memory 
 
 ## ❓ FAQ
 
-**Does my data leave my browser?** No. Everything is processed locally. The optional AI feature sends only an anonymized, PII-stripped summary, and only when you click "AI Analysis" with your own API key configured.
+**Does my data leave my browser?** No. Everything is processed locally. The optional AI features (per-finding analysis and the Coach) send only an anonymized, PII-stripped summary — URLs are reduced to `site.com/path`, never page content — and only when you use them with your own API key configured.
+
+**Which AI providers are supported?** **Claude** (Anthropic) and **Google Gemini**, which has a free tier — so you can use the AI features at no cost. Pick the provider and paste a key in **Settings → AI Provider**.
 
 **Will it slow down the page I'm profiling?** It's designed not to — see [overhead](#-performance-overhead). The circuit breaker is your safety net.
 
@@ -223,11 +240,18 @@ Found a site where Perflex misbehaves or misses an issue? **[Open an issue](http
 ## 🗺️ Roadmap
 
 - [x] **[Chrome Web Store listing](https://chromewebstore.google.com/detail/perflex/mhnljjmpmafepjemojpdifjjfldlgaag)** — live!
+- [x] **AI Performance Coach** (conversational) — Claude **and** free Google Gemini
+- [x] **Network waterfall** (virtualized, phase-colored, dependency-aware)
+- [x] **Lighthouse score predictor** + "What If" fix simulator
+- [x] **Third-party impact dashboard** with a "remove this vendor" simulator
+- [x] Redesigned PDF report + interactive shareable HTML viewer
+- [x] Shareable session permalinks (URL-fragment encoded + offline HTML)
+- [x] Framework-aware detectors (React/Vue/Angular/Next/Nuxt/jQuery)
+- [ ] **Performance budgets + CI integration** (gate PRs on Core Web Vitals)
+- [ ] Before/after comparison & saved baselines
 - [ ] DevTools panel integration
 - [ ] Firefox / Safari support
 - [ ] Coverage-API-backed unused-JS detection
-- [x] Shareable session permalinks (URL-fragment encoded + offline HTML)
-- [x] Framework-aware detectors (React/Vue/Angular/Next/Nuxt/jQuery)
 
 ## 📄 License
 
