@@ -46,12 +46,7 @@ Everything runs locally in your browser. No account, no tracking, nothing is upl
 Perflex is free and open source (MIT). Source: https://github.com/svemulapati/perflex
 ```
 
-**Screenshots** (upload these — already 1280×800):
-- `docs/screenshots/store/overview.png`
-- `docs/screenshots/store/scripts.png`
-- `docs/screenshots/store/timeline.png`
-- `docs/screenshots/store/findings.png`
-- `docs/screenshots/store/settings.png`
+**Screenshots** — `docs/screenshots/store/01.png` … `07.png` (all **1280×800**, 24-bit, no alpha). The store allows up to **5**, so pick your strongest five (e.g. Overview with the Lighthouse gauge, Network waterfall, Coach, Third Parties, Findings).
 
 **Store icon:** 128×128 — `dist/src/assets/icons/icon-128.png` *(consider a more polished icon before launch).*
 
