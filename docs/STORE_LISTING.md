@@ -4,8 +4,8 @@ Everything you need to paste into the [Developer Dashboard](https://chrome.googl
 
 ## 1. Upload package
 
-- File: **`perflex-1.0.0.zip`** (repo root, rebuilt by `npm run build` → zipped from `dist/`).
-- `manifest.json` is at the zip root ✔
+- File: **`perflex-2.0.0.zip`** (repo root, rebuilt by `npm run build` → zipped from `dist/`).
+- `manifest.json` is at the zip root ✔ — manifest `version` is **2.0.0** (must be higher than the published version).
 
 ## 2. Store listing
 
@@ -13,7 +13,7 @@ Everything you need to paste into the [Developer Dashboard](https://chrome.googl
 
 **Summary** (≤132 chars):
 ```
-Real-time JavaScript performance profiler: function-level attribution, 30+ anti-pattern detectors, and AI-powered fixes.
+JS performance profiler: function-level attribution, 37 detectors, network waterfall, Lighthouse estimate & AI coach.
 ```
 
 **Category:** `Developer Tools`
@@ -23,22 +23,25 @@ Real-time JavaScript performance profiler: function-level attribution, 30+ anti-
 ```
 Perflex tells you exactly which line of JavaScript is making your site slow — and how to fix it.
 
-It passively instruments any page you visit and attributes main-thread time down to the originating script, function, and source position. It pattern-matches your session against 30+ known performance anti-patterns and generates concrete remediation plans with before/after code, a risk level, and a note on why the fix is safe for your UI and business logic.
+It passively instruments any page you visit and attributes main-thread time down to the originating script, function, and source position. It pattern-matches your session against 37 known performance anti-patterns and generates concrete remediation plans with before/after code, a risk level, and a note on why the fix is safe for your UI and business logic.
 
 FEATURES
 • Function-level attribution via the Long Animation Frames API
 • Script leaderboard ranked by main-thread time, long tasks, transfer size & more
 • Live Core Web Vitals (LCP, INP, CLS), TBT, FPS, JS heap, and a 0–100 health score
+• Local Lighthouse performance-score estimate with a "What If" fix simulator
+• Network waterfall: virtualized, color-coded timing phases, render-blocking & cache indicators
+• Third-party impact dashboard: vendors ranked by their performance tax, with a "remove this vendor" simulator
 • Zoomable interaction timeline with causal chains (click → task → fetch → reflow → shift)
-• 30+ anti-pattern detectors across loading, execution, rendering, network, third-party & frameworks
+• 37 anti-pattern detectors across loading, execution, rendering, network, third-party & frameworks
 • Framework-aware: detects React/Vue/Angular/Next/Nuxt and flags dev builds shipped to production
 • Business-safe remediations with before/after code and risk levels
-• Optional AI remediation using your own Anthropic Claude API key
+• AI Performance Coach + per-finding AI fixes — use your own Anthropic Claude OR free Google Gemini key
 • In-page overlay (Ctrl+Shift+X) with live FPS / heap / long tasks
-• Export to JSON, HAR, OpenTelemetry traces, and PDF; shareable session links
+• Export to JSON, HAR, OpenTelemetry traces, a redesigned PDF report, and an interactive shareable HTML
 
 PRIVACY
-Everything runs locally in your browser. No account, no tracking, nothing is uploaded. The optional AI feature sends only an anonymized, PII-free summary to Anthropic — and only when you click "AI Analysis" with your own API key configured.
+Everything runs locally in your browser. No account, no tracking, nothing is uploaded. The optional AI features send only an anonymized, PII-free summary to your chosen provider (Anthropic or Google) — and only when you use them with your own API key configured.
 
 Perflex is free and open source (MIT). Source: https://github.com/svemulapati/perflex
 ```
@@ -79,7 +82,7 @@ Perflex measures and diagnoses the JavaScript performance of web pages the user 
 - Does the extension collect personally identifiable information? **No.**
 - Health, financial, authentication, personal communications, location, web history? **No.**
 - The extension processes web-page performance metrics **locally**.
-- The optional AI feature transmits a sanitized, non-PII finding summary to Anthropic (api.anthropic.com) **only on explicit user action with the user's own API key**.
+- The optional AI features transmit a sanitized, non-PII summary to the user's selected provider — Anthropic (api.anthropic.com) or Google Gemini (generativelanguage.googleapis.com) — **only on explicit user action with the user's own API key**.
 - Data is **not** sold or transferred to third parties for purposes unrelated to the single purpose.
 
 **Privacy policy URL:** `https://svemulapati.github.io/perflex/privacy.html`
