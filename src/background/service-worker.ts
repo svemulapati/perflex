@@ -89,6 +89,9 @@ chrome.runtime.onMessage.addListener((message: Record<string, unknown>, sender) 
     }
     const port = panelPorts.get(tabId);
     port?.postMessage({ type: 'events', events: incoming });
+  } else if (message.type === 'perflex:flow-step') {
+    // Pass recorded flow steps straight to the panel (not buffered).
+    panelPorts.get(tabId)?.postMessage({ type: 'flow-step', step: message.step });
   } else if (message.type === 'perflex:meta') {
     const state = getTab(tabId);
     if (typeof message.fps === 'number') state.fps = message.fps;

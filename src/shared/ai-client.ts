@@ -113,12 +113,24 @@ const RETRY_DELAYS_MS = [1000, 3000];
 /** Map an HTTP status to a user-facing message — never a raw stack or body. */
 export function friendlyApiError(status: number): string {
   if (status === 401 || status === 403)
-    return 'Your Anthropic API key was rejected. Check the key in Settings.';
-  if (status === 429) return 'Claude is rate-limiting requests right now. Try again in a moment.';
-  if (status === 400) return 'Claude rejected the request. This finding may be malformed — try another.';
-  if (status >= 500) return 'Claude is temporarily unavailable. Please try again shortly.';
-  return `Claude returned an unexpected error (${status}).`;
+    return 'Your API key was rejected. Check the key in Settings.';
+  if (status === 429) return 'The AI service is rate-limiting requests right now. Try again in a moment.';
+  if (status === 400) return 'The request was rejected — check your API key and selected model in Settings.';
+  if (status >= 500) return 'The AI service is temporarily unavailable. Please try again shortly.';
+  return `The AI service returned an unexpected error (${status}).`;
 }
+
+export type AiProvider = 'anthropic' | 'google';
+
+/** Which provider + credentials to use for a request. */
+export interface ChatConfig {
+  provider: AiProvider;
+  apiKey: string;
+  model: string;
+  fetchImpl?: typeof fetch;
+}
+
+const NETWORK_ERROR = 'Could not reach the AI service. Check your network connection and try again.';
 
 export interface AiOptions {
   apiKey: string;
@@ -158,7 +170,7 @@ export async function postToClaude(body: object, opts: AiOptions): Promise<strin
     } catch {
       // Network-level failure (offline, DNS, CORS) — retriable.
       if (attempt >= delays.length)
-        throw new Error('Could not reach Claude. Check your network connection and try again.');
+        throw new Error(NETWORK_ERROR);
       await doSleep(delays[attempt]);
       continue;
     }
@@ -177,30 +189,218 @@ export async function postToClaude(body: object, opts: AiOptions): Promise<strin
   }
 }
 
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/** Extract appended text from one SSE `data:` JSON payload (pure, testable). */
+export function sseTextDelta(jsonPayload: string): string {
+  try {
+    const ev = JSON.parse(jsonPayload) as { type?: string; delta?: { type?: string; text?: string } };
+    if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') return ev.delta.text ?? '';
+  } catch {
+    /* keep-alive pings / non-JSON lines */
+  }
+  return '';
+}
+
+export interface StreamOptions {
+  apiKey: string;
+  model: string;
+  system: string;
+  messages: ChatTurn[];
+  onText: (chunk: string) => void;
+  maxTokens?: number;
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+}
+
+/**
+ * Stream a Claude chat completion, invoking onText for each token chunk.
+ * Resolves with the full text. Throws a user-friendly Error — never a raw stack.
+ */
+export async function streamClaude(opts: StreamOptions): Promise<string> {
+  const doFetch = opts.fetchImpl ?? fetch;
+  let res: Response;
+  try {
+    res = await doFetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': opts.apiKey,
+        'anthropic-version': ANTHROPIC_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens ?? 1024,
+        system: opts.system,
+        messages: opts.messages,
+        stream: true,
+      }),
+      signal: opts.signal,
+    });
+  } catch {
+    throw new Error(NETWORK_ERROR);
+  }
+  if (!res.ok) throw new Error(friendlyApiError(res.status));
+
+  // Fallback if the environment didn't give us a readable stream.
+  if (!res.body) {
+    const data = (await res.json().catch(() => ({}))) as { content?: Array<{ text?: string }> };
+    const text = data.content?.map((c) => c.text ?? '').join('') ?? '';
+    if (text) opts.onText(text);
+    return text;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (line.startsWith('data:')) {
+        const chunk = sseTextDelta(line.slice(5).trim());
+        if (chunk) {
+          full += chunk;
+          opts.onText(chunk);
+        }
+      }
+    }
+  }
+  return full;
+}
+
+/* ---------------------------------------------------------------------------
+ * Google Gemini (free tier) — same chat surface, different wire format.
+ * API key travels in the query string; system prompt via systemInstruction;
+ * assistant turns use the "model" role.
+ * ------------------------------------------------------------------------- */
+
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/** Extract text from one Gemini SSE `data:` JSON payload (pure, testable). */
+export function geminiSseText(jsonPayload: string): string {
+  try {
+    const ev = JSON.parse(jsonPayload) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const parts = ev.candidates?.[0]?.content?.parts;
+    if (Array.isArray(parts)) return parts.map((p) => p.text ?? '').join('');
+  } catch {
+    /* non-JSON line */
+  }
+  return '';
+}
+
+function geminiBody(system: string | undefined, messages: ChatTurn[], maxTokens: number): string {
+  return JSON.stringify({
+    ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+    contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+    generationConfig: { maxOutputTokens: maxTokens },
+  });
+}
+
+async function geminiComplete(cfg: ChatConfig, system: string | undefined, messages: ChatTurn[], maxTokens: number): Promise<string> {
+  const doFetch = cfg.fetchImpl ?? fetch;
+  const url = `${GEMINI_BASE}/${cfg.model}:generateContent?key=${encodeURIComponent(cfg.apiKey)}`;
+  let res: Response;
+  try {
+    res = await doFetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: geminiBody(system, messages, maxTokens) });
+  } catch {
+    throw new Error(NETWORK_ERROR);
+  }
+  if (!res.ok) throw new Error(friendlyApiError(res.status));
+  const data = (await res.json().catch(() => ({}))) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  return data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+}
+
+async function geminiStream(cfg: ChatConfig, req: ChatRequest): Promise<string> {
+  const doFetch = cfg.fetchImpl ?? fetch;
+  const url = `${GEMINI_BASE}/${cfg.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(cfg.apiKey)}`;
+  let res: Response;
+  try {
+    res = await doFetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: geminiBody(req.system, req.messages, req.maxTokens ?? 1024), signal: req.signal });
+  } catch {
+    throw new Error(NETWORK_ERROR);
+  }
+  if (!res.ok) throw new Error(friendlyApiError(res.status));
+  if (!res.body) {
+    const text = await geminiComplete(cfg, req.system, req.messages, req.maxTokens ?? 1024);
+    if (text) req.onText(text);
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (line.startsWith('data:')) {
+        const chunk = geminiSseText(line.slice(5).trim());
+        if (chunk) {
+          full += chunk;
+          req.onText(chunk);
+        }
+      }
+    }
+  }
+  return full;
+}
+
+/* ---- Provider-agnostic entry points ---- */
+
+export interface ChatRequest {
+  system: string;
+  messages: ChatTurn[];
+  onText: (chunk: string) => void;
+  maxTokens?: number;
+  signal?: AbortSignal;
+}
+
+/** Stream a chat completion from whichever provider the config selects. */
+export function streamChat(cfg: ChatConfig, req: ChatRequest): Promise<string> {
+  if (cfg.provider === 'google') return geminiStream(cfg, req);
+  return streamClaude({ apiKey: cfg.apiKey, model: cfg.model, fetchImpl: cfg.fetchImpl, system: req.system, messages: req.messages, onText: req.onText, maxTokens: req.maxTokens, signal: req.signal });
+}
+
+/** Non-streaming chat completion from whichever provider the config selects. */
+export function completeChat(cfg: ChatConfig, system: string | undefined, messages: ChatTurn[], maxTokens = 1024): Promise<string> {
+  if (cfg.provider === 'google') return geminiComplete(cfg, system, messages, maxTokens);
+  return postToClaude(
+    { model: cfg.model, max_tokens: maxTokens, ...(system ? { system } : {}), messages },
+    { apiKey: cfg.apiKey, model: cfg.model, fetchImpl: cfg.fetchImpl }
+  );
+}
+
 const cache = new Map<string, RemediationPlan>();
 
 function cacheKey(s: SanitizedFinding): string {
   return `${s.pattern}|${s.filename}|${s.functionName ?? ''}`;
 }
 
-/** Generate a contextual remediation via the Claude API. Results are cached. */
+/** Generate a contextual remediation via the configured provider. Cached. */
 export async function generateRemediation(
   finding: PerformanceFinding,
-  opts: AiOptions
+  cfg: ChatConfig
 ): Promise<RemediationPlan> {
   const sanitized = sanitizeFinding(finding);
-  const key = cacheKey(sanitized);
+  const key = `${cfg.provider}|${cacheKey(sanitized)}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const text = await postToClaude(
-    {
-      model: opts.model,
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: buildPrompt(sanitized) }],
-    },
-    opts
-  );
+  const text = await completeChat(cfg, undefined, [{ role: 'user', content: buildPrompt(sanitized) }]);
 
   const plan = toRemediation(extractJson(text), finding.remediation?.summary ?? finding.patternName);
   cache.set(key, plan);

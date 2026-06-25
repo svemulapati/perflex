@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PerformanceFinding, RemediationPlan } from '@/shared/types';
 import { generateRemediation } from '@/shared/ai-client';
-import { useSettingsStore } from '../stores/settings-store';
+import { resolveAiConfig, useSettingsStore } from '../stores/settings-store';
 import { CodeDiff } from './CodeDiff';
 
 const RISK_STYLE: Record<RemediationPlan['riskLevel'], string> = {
@@ -11,9 +11,8 @@ const RISK_STYLE: Record<RemediationPlan['riskLevel'], string> = {
 };
 
 export function RemediationPanel({ finding }: { finding: PerformanceFinding }) {
-  const apiKey = useSettingsStore((s) => s.anthropicApiKey);
-  const aiEnabled = useSettingsStore((s) => s.aiEnabled);
-  const aiModel = useSettingsStore((s) => s.aiModel);
+  const settings = useSettingsStore();
+  const aiConfig = resolveAiConfig(settings);
   const [copied, setCopied] = useState(false);
   const [aiPlan, setAiPlan] = useState<RemediationPlan | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -22,12 +21,13 @@ export function RemediationPanel({ finding }: { finding: PerformanceFinding }) {
   const plan = aiPlan ?? finding.remediation;
   if (!plan) return <div className="text-[11px] text-zinc-500">No remediation available.</div>;
 
-  const aiAvailable = aiEnabled && apiKey.length > 0;
+  const aiAvailable = settings.aiEnabled && aiConfig !== null;
   const runAi = async () => {
+    if (!aiConfig) return;
     setAiLoading(true);
     setAiError(null);
     try {
-      setAiPlan(await generateRemediation(finding, { apiKey, model: aiModel }));
+      setAiPlan(await generateRemediation(finding, aiConfig));
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'AI request failed');
     } finally {

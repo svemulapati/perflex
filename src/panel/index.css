@@ -31,6 +31,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Coach markdown rendering. */
+.coach-md .md-p { margin: 0 0 6px; }
+.coach-md .md-p:last-child { margin-bottom: 0; }
+.coach-md .md-h { font-weight: 700; margin: 8px 0 4px; }
+.coach-md .md-h1 { font-size: 14px; }
+.coach-md .md-h2, .coach-md .md-h3, .coach-md .md-h4 { font-size: 12px; }
+.coach-md .md-list { margin: 4px 0 6px; padding-left: 18px; }
+.coach-md .md-list li { margin: 2px 0; }
+.coach-md .md-code { background: #27272a; border-radius: 3px; padding: 0 3px; font-family: ui-monospace, monospace; font-size: 11px; }
+.coach-md .md-pre { background: #18181b; border: 1px solid #27272a; border-radius: 6px; padding: 8px; overflow-x: auto; margin: 6px 0; }
+.coach-md .md-pre code { font-family: ui-monospace, monospace; font-size: 11px; white-space: pre; }
+.coach-md strong { font-weight: 700; }
+
 /* Thin, dark scrollbars to match the dense tool aesthetic. */
 ::-webkit-scrollbar {
   width: 8px;

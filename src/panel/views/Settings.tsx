@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
+import { useFlowStore } from '../stores/flow-store';
+import { FlowReplay } from '../components/flow/FlowReplay';
+import { parseFlow, serializeFlow, type Flow } from '@/shared/flow';
 import { toJSON, toHAR, toOTLP, buildReportHTML, buildSharePayload, encodeSession, buildPermalink } from '@/shared/export';
 import { downloadFile, openReport, timestampedName, buildShareableHTML, copyToClipboard } from '../export-actions';
 
@@ -10,12 +13,38 @@ export function Settings() {
   const reconnect = useSessionStore((s) => s.reconnect);
   const requestExport = useSessionStore((s) => s.requestExport);
 
-  const [apiKey, setApiKey] = useState('');
+  const [keyInput, setKeyInput] = useState('');
   const [domains, setDomains] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+
+  const flows = useFlowStore((s) => s.flows);
+  const flowsAvailable = useFlowStore((s) => s.available);
+  const loadFlows = useFlowStore((s) => s.load);
+  const saveFlow = useFlowStore((s) => s.save);
+  const removeFlow = useFlowStore((s) => s.remove);
+  const [flowMsg, setFlowMsg] = useState<string | null>(null);
+  const [replayId, setReplayId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void loadFlows();
+  }, [loadFlows]);
+
+  const importFlowFile = async (file: File) => {
+    try {
+      const flow = parseFlow(await file.text());
+      await saveFlow(flow);
+      setFlowMsg(`Imported "${flow.name}".`);
+    } catch (e) {
+      setFlowMsg(e instanceof Error ? e.message : 'Could not import that file.');
+    }
+  };
+
+  const exportFlowFile = (flow: Flow) =>
+    downloadFile(`${flow.name.replace(/\s+/g, '-').toLowerCase()}.flow.json`, serializeFlow(flow), 'application/json');
 
   const runExport = async (format: 'json' | 'har' | 'otel' | 'pdf') => {
     setExporting(format);
@@ -65,12 +94,15 @@ export function Settings() {
     }
   };
 
+  const isGoogle = settings.aiProvider === 'google';
+  const storedKey = isGoogle ? settings.googleApiKey : settings.anthropicApiKey;
+
   useEffect(() => {
     if (settings.loaded) {
-      setApiKey(settings.anthropicApiKey);
+      setKeyInput(storedKey);
       setDomains(settings.firstPartyDomains.join('\n'));
     }
-  }, [settings.loaded, settings.anthropicApiKey, settings.firstPartyDomains]);
+  }, [settings.loaded, storedKey, settings.firstPartyDomains]);
 
   const flash = () => {
     setSaved(true);
@@ -78,7 +110,7 @@ export function Settings() {
   };
 
   const saveAi = async () => {
-    await settings.update({ anthropicApiKey: apiKey.trim() });
+    await settings.update(isGoogle ? { googleApiKey: keyInput.trim() } : { anthropicApiKey: keyInput.trim() });
     flash();
   };
 
@@ -94,52 +126,85 @@ export function Settings() {
 
   return (
     <div className="contain-content flex flex-col gap-5 p-3 text-zinc-200">
-      {/* AI remediation */}
-      <Section title="AI Remediation (Claude)">
+      {/* AI provider */}
+      <Section title="AI Provider">
         <p className="text-[11px] text-zinc-400">
-          Opt-in. When set, the "AI Analysis" button on each finding generates a contextual fix. Only a
-          sanitized summary is sent (filename, function, metrics) — never URLs with query strings, request
-          bodies, or page content.
+          Powers the AI Coach and per-finding fixes. Only a sanitized summary is sent (filename, function,
+          metrics) — never URLs with query strings, request bodies, or page content.
         </p>
-        <label className="mt-1 flex items-center gap-2">
+        <label className="mt-1 flex items-center gap-2 text-[11px]">
+          Provider
+          <select
+            value={settings.aiProvider}
+            onChange={(e) => settings.update({ aiProvider: e.target.value as 'anthropic' | 'google' })}
+            className="rounded bg-zinc-800 px-2 py-0.5 outline-none"
+          >
+            <option value="anthropic">Claude (Anthropic)</option>
+            <option value="google">Gemini (Google · free tier)</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={settings.aiEnabled}
             onChange={(e) => settings.update({ aiEnabled: e.target.checked })}
           />
-          <span className="text-[11px]">Enable AI remediation</span>
+          <span className="text-[11px]">Enable AI features</span>
         </label>
         <div className="flex gap-1">
           <input
             type={showKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-ant-…"
+            value={keyInput}
+            onChange={(e) => setKeyInput(e.target.value)}
+            placeholder={isGoogle ? 'AIza… (Google AI Studio key)' : 'sk-ant-…'}
             className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-[11px] outline-none focus:border-brand"
           />
           <button onClick={() => setShowKey((s) => !s)} className="rounded bg-zinc-800 px-2 text-[11px]">
             {showKey ? 'Hide' : 'Show'}
           </button>
         </div>
-        <label className="flex items-center gap-2 text-[11px]">
-          Model
-          <select
-            value={settings.aiModel}
-            onChange={(e) => settings.update({ aiModel: e.target.value })}
-            className="rounded bg-zinc-800 px-2 py-0.5 outline-none"
-          >
-            <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-            <option value="claude-opus-4-8">claude-opus-4-8</option>
-            <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
-          </select>
-        </label>
+        {isGoogle ? (
+          <label className="flex items-center gap-2 text-[11px]">
+            Model
+            <select
+              value={settings.geminiModel}
+              onChange={(e) => settings.update({ geminiModel: e.target.value })}
+              className="rounded bg-zinc-800 px-2 py-0.5 outline-none"
+            >
+              <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+              <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+            </select>
+          </label>
+        ) : (
+          <label className="flex items-center gap-2 text-[11px]">
+            Model
+            <select
+              value={settings.aiModel}
+              onChange={(e) => settings.update({ aiModel: e.target.value })}
+              className="rounded bg-zinc-800 px-2 py-0.5 outline-none"
+            >
+              <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+              <option value="claude-opus-4-8">claude-opus-4-8</option>
+              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+            </select>
+          </label>
+        )}
         <div className="flex items-center gap-2">
           <button onClick={saveAi} className="rounded bg-brand px-2 py-1 text-[11px] font-semibold text-white">
             Save key
           </button>
-          <span className="text-[10px] text-zinc-500">
-            {settings.anthropicApiKey ? '✓ Key configured' : 'No key set'}
-          </span>
+          <span className="text-[10px] text-zinc-500">{storedKey ? '✓ Key configured' : 'No key set'}</span>
+          {isGoogle && (
+            <a
+              href="https://aistudio.google.com/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-brand hover:underline"
+            >
+              Get a free key
+            </a>
+          )}
         </div>
       </Section>
 
@@ -167,6 +232,73 @@ export function Settings() {
             <span>{label}</span>
           </label>
         ))}
+      </Section>
+
+      {/* User flows */}
+      <Section title="User Flows">
+        <p className="text-[11px] text-zinc-400">
+          Saved interaction flows (e.g. a checkout path) for repeatable performance testing. Recording lands in
+          the next update — for now you can import/export flow files.
+        </p>
+        {!flowsAvailable && (
+          <div className="text-[11px] text-severity-warning">
+            Local storage is unavailable (private browsing or full) — flows can't be saved.
+          </div>
+        )}
+        {flows.length === 0 ? (
+          <div className="text-[11px] text-zinc-500">No saved flows yet.</div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {flows.map((f) => (
+              <div key={f.id} className="rounded border border-zinc-800 bg-zinc-900/40 px-2 py-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="truncate text-[11px] text-zinc-200">{f.name}</div>
+                    <div className="text-[10px] text-zinc-500">
+                      {f.steps.length} steps{f.baseline ? ' · baseline saved' : ''}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => setReplayId((id) => (id === f.id ? null : f.id))}
+                      className={`rounded px-2 py-0.5 text-[10px] ${replayId === f.id ? 'bg-brand text-white' : 'bg-zinc-800 hover:text-zinc-100'}`}
+                    >
+                      Replay
+                    </button>
+                    <button onClick={() => exportFlowFile(f)} className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] hover:text-zinc-100">
+                      Export
+                    </button>
+                    <button onClick={() => removeFlow(f.id)} className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-severity-critical hover:bg-zinc-700">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                {replayId === f.id && <FlowReplay flow={f} />}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={!flowsAvailable}
+            className="self-start rounded bg-zinc-800 px-2 py-1 text-[11px] hover:bg-zinc-700 disabled:opacity-50"
+          >
+            Import flow…
+          </button>
+          {flowMsg && <span className="text-[10px] text-zinc-500">{flowMsg}</span>}
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void importFlowFile(file);
+            e.target.value = '';
+          }}
+        />
       </Section>
 
       {/* Classification */}

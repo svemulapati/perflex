@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSessionStore } from './stores/session-store';
 import { useSettingsStore } from './stores/settings-store';
+import { useRecordingStore } from './stores/recording-store';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { shortUrl } from './format';
 
@@ -13,6 +14,7 @@ const NetworkWaterfall = lazy(() =>
 );
 const Timeline = lazy(() => import('./views/Timeline').then((m) => ({ default: m.Timeline })));
 const Findings = lazy(() => import('./views/Findings').then((m) => ({ default: m.Findings })));
+const Coach = lazy(() => import('./views/Coach').then((m) => ({ default: m.Coach })));
 const Settings = lazy(() => import('./views/Settings').then((m) => ({ default: m.Settings })));
 
 /** Lightweight skeleton shown while a tab's chunk loads (no spinner — spec C.3). */
@@ -26,7 +28,7 @@ function TabSkeleton() {
   );
 }
 
-type Tab = 'overview' | 'scripts' | 'network' | 'timeline' | 'findings' | 'settings';
+type Tab = 'overview' | 'scripts' | 'network' | 'timeline' | 'findings' | 'coach' | 'settings';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -34,6 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'network', label: 'Network' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'findings', label: 'Findings' },
+  { id: 'coach', label: 'Coach' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -47,6 +50,22 @@ export function App() {
   const meta = useSessionStore((s) => s.meta);
   const url = useSessionStore((s) => s.url);
   const loadSettings = useSettingsStore((s) => s.load);
+
+  const flowRecording = useRecordingStore((s) => s.recording);
+  const flowStepCount = useRecordingStore((s) => s.steps.length);
+  const startFlow = useRecordingStore((s) => s.start);
+  const stopFlow = useRecordingStore((s) => s.stopAndSave);
+  const cancelFlow = useRecordingStore((s) => s.cancel);
+
+  const onFlowButton = async () => {
+    if (!flowRecording) {
+      startFlow();
+      return;
+    }
+    const name = window.prompt(`Save this flow (${flowStepCount} steps)? Enter a name, or cancel to discard.`, 'My flow');
+    if (name === null) cancelFlow();
+    else await stopFlow(name);
+  };
 
   useEffect(() => {
     // Load persisted settings before connecting so the first-party allowlist
@@ -78,6 +97,16 @@ export function App() {
               THROTTLED
             </span>
           )}
+          <button
+            onClick={onFlowButton}
+            title={flowRecording ? 'Stop & save the flow' : 'Record a user flow'}
+            className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] ${
+              flowRecording ? 'bg-severity-critical/20 text-severity-critical' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${flowRecording ? 'animate-pulse bg-severity-critical' : 'bg-zinc-500'}`} />
+            {flowRecording ? `Stop · ${flowStepCount}` : 'Flow'}
+          </button>
           <button
             onClick={toggleRecording}
             title={recording ? 'Pause recording' : 'Resume recording'}
@@ -126,6 +155,7 @@ export function App() {
             {tab === 'network' && <NetworkWaterfall />}
             {tab === 'timeline' && <Timeline />}
             {tab === 'findings' && <Findings />}
+            {tab === 'coach' && <Coach />}
             {tab === 'settings' && <Settings />}
           </Suspense>
         </ErrorBoundary>
