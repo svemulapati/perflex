@@ -4,7 +4,6 @@
  * batched and posted to the isolated-world bridge via window.postMessage.
  */
 import type { CollectorEvent } from '@/shared/types';
-import type { FlowStep } from '@/shared/flow';
 import { BATCH_FLUSH_INTERVAL } from '@/shared/constants';
 import { CollectorContext } from './context';
 import { CircuitBreaker, type ThrottleLevel } from './circuit-breaker';
@@ -18,16 +17,14 @@ import { setupMemoryMonitor } from './memory-monitor';
 import { setupInteractionTracker } from './interaction-tracker';
 import { setupRuntimeHooks } from './runtime-hooks';
 import { setupFrameworkDetector } from './framework-detector';
-import { setupFlowRecorder } from './flow-recorder';
 import { setupOverlay } from '../overlay/overlay';
 
 export const PERFLEX_MESSAGE_SOURCE = 'perflex-collector';
 
 interface CollectorMessage {
   source: typeof PERFLEX_MESSAGE_SOURCE;
-  kind: 'events' | 'meta' | 'flow-step';
+  kind: 'events' | 'meta';
   events?: CollectorEvent[];
-  step?: FlowStep;
   throttleLevel?: ThrottleLevel;
   fps?: number;
   frameHealth?: number;
@@ -98,28 +95,6 @@ function start(): void {
 
   const frameTracker = setupFrameBudgetTracker(ctx);
   teardown.push(frameTracker.stop);
-
-  // Flow recorder — inert until the panel sends flow-record-start (Feature 4).
-  safeSetup('flow-recorder', () => {
-    const recorder = setupFlowRecorder(ctx, (step) =>
-      post({ source: PERFLEX_MESSAGE_SOURCE, kind: 'flow-step', step })
-    );
-    const onControl = (e: MessageEvent) => {
-      if (e.source !== window) return;
-      const data = e.data as { source?: string; action?: string } | undefined;
-      if (data?.source !== 'perflex-control') return;
-      if (data.action === 'flow-record-start') {
-        recorder.start();
-      } else if (data.action === 'flow-record-resume') {
-        recorder.resume();
-      } else if (data.action === 'flow-record-stop') recorder.stop();
-    };
-    window.addEventListener('message', onControl);
-    return () => {
-      window.removeEventListener('message', onControl);
-      recorder.teardown();
-    };
-  });
 
   // IMPORTANT: wire up flushing + meta BEFORE the (optional) overlay, so a
   // failure constructing the overlay — e.g. innerHTML rejected by a page's

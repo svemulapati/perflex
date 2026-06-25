@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSessionStore } from './stores/session-store';
 import { useSettingsStore } from './stores/settings-store';
-import { useRecordingStore } from './stores/recording-store';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { shortUrl } from './format';
 
@@ -51,22 +50,6 @@ export function App() {
   const url = useSessionStore((s) => s.url);
   const loadSettings = useSettingsStore((s) => s.load);
 
-  const flowRecording = useRecordingStore((s) => s.recording);
-  const flowStepCount = useRecordingStore((s) => s.steps.length);
-  const startFlow = useRecordingStore((s) => s.start);
-  const stopFlow = useRecordingStore((s) => s.stopAndSave);
-  const cancelFlow = useRecordingStore((s) => s.cancel);
-
-  const onFlowButton = async () => {
-    if (!flowRecording) {
-      startFlow();
-      return;
-    }
-    const name = window.prompt(`Save this flow (${flowStepCount} steps)? Enter a name, or cancel to discard.`, 'My flow');
-    if (name === null) cancelFlow();
-    else await stopFlow(name);
-  };
-
   useEffect(() => {
     // Load persisted settings before connecting so the first-party allowlist
     // is applied to the initial correlator session.
@@ -97,16 +80,6 @@ export function App() {
               THROTTLED
             </span>
           )}
-          <button
-            onClick={onFlowButton}
-            title={flowRecording ? 'Stop & save the flow' : 'Record a user flow'}
-            className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] ${
-              flowRecording ? 'bg-severity-critical/20 text-severity-critical' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${flowRecording ? 'animate-pulse bg-severity-critical' : 'bg-zinc-500'}`} />
-            {flowRecording ? `Stop · ${flowStepCount}` : 'Flow'}
-          </button>
           <button
             onClick={toggleRecording}
             title={recording ? 'Pause recording' : 'Resume recording'}

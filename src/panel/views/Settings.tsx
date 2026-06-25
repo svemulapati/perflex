@@ -1,9 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
 import { useSessionStore } from '../stores/session-store';
-import { useFlowStore } from '../stores/flow-store';
-import { FlowReplay } from '../components/flow/FlowReplay';
-import { parseFlow, serializeFlow, type Flow } from '@/shared/flow';
 import { toJSON, toHAR, toOTLP, buildReportHTML, buildSharePayload, encodeSession, buildPermalink } from '@/shared/export';
 import { downloadFile, openReport, timestampedName, buildShareableHTML, copyToClipboard } from '../export-actions';
 
@@ -19,32 +16,6 @@ export function Settings() {
   const [saved, setSaved] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
-
-  const flows = useFlowStore((s) => s.flows);
-  const flowsAvailable = useFlowStore((s) => s.available);
-  const loadFlows = useFlowStore((s) => s.load);
-  const saveFlow = useFlowStore((s) => s.save);
-  const removeFlow = useFlowStore((s) => s.remove);
-  const [flowMsg, setFlowMsg] = useState<string | null>(null);
-  const [replayId, setReplayId] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    void loadFlows();
-  }, [loadFlows]);
-
-  const importFlowFile = async (file: File) => {
-    try {
-      const flow = parseFlow(await file.text());
-      await saveFlow(flow);
-      setFlowMsg(`Imported "${flow.name}".`);
-    } catch (e) {
-      setFlowMsg(e instanceof Error ? e.message : 'Could not import that file.');
-    }
-  };
-
-  const exportFlowFile = (flow: Flow) =>
-    downloadFile(`${flow.name.replace(/\s+/g, '-').toLowerCase()}.flow.json`, serializeFlow(flow), 'application/json');
 
   const runExport = async (format: 'json' | 'har' | 'otel' | 'pdf') => {
     setExporting(format);
@@ -218,9 +189,7 @@ export function Settings() {
           [
             ['websocketMonitor', 'WebSocket monitoring'],
             ['workerMonitor', 'Web Worker profiling'],
-            ['flowRecorder', 'User flow recording'],
             ['heatmap', 'Performance heatmap overlay'],
-            ['replay', 'Performance replay capture'],
           ] as const
         ).map(([flag, label]) => (
           <label key={flag} className="flex items-center gap-2 text-[11px]">
@@ -232,73 +201,6 @@ export function Settings() {
             <span>{label}</span>
           </label>
         ))}
-      </Section>
-
-      {/* User flows */}
-      <Section title="User Flows">
-        <p className="text-[11px] text-zinc-400">
-          Saved interaction flows (e.g. a checkout path) for repeatable performance testing. Recording lands in
-          the next update — for now you can import/export flow files.
-        </p>
-        {!flowsAvailable && (
-          <div className="text-[11px] text-severity-warning">
-            Local storage is unavailable (private browsing or full) — flows can't be saved.
-          </div>
-        )}
-        {flows.length === 0 ? (
-          <div className="text-[11px] text-zinc-500">No saved flows yet.</div>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {flows.map((f) => (
-              <div key={f.id} className="rounded border border-zinc-800 bg-zinc-900/40 px-2 py-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <div className="truncate text-[11px] text-zinc-200">{f.name}</div>
-                    <div className="text-[10px] text-zinc-500">
-                      {f.steps.length} steps{f.baseline ? ' · baseline saved' : ''}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button
-                      onClick={() => setReplayId((id) => (id === f.id ? null : f.id))}
-                      className={`rounded px-2 py-0.5 text-[10px] ${replayId === f.id ? 'bg-brand text-white' : 'bg-zinc-800 hover:text-zinc-100'}`}
-                    >
-                      Replay
-                    </button>
-                    <button onClick={() => exportFlowFile(f)} className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] hover:text-zinc-100">
-                      Export
-                    </button>
-                    <button onClick={() => removeFlow(f.id)} className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-severity-critical hover:bg-zinc-700">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                {replayId === f.id && <FlowReplay flow={f} />}
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={!flowsAvailable}
-            className="self-start rounded bg-zinc-800 px-2 py-1 text-[11px] hover:bg-zinc-700 disabled:opacity-50"
-          >
-            Import flow…
-          </button>
-          {flowMsg && <span className="text-[10px] text-zinc-500">{flowMsg}</span>}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void importFlowFile(file);
-            e.target.value = '';
-          }}
-        />
       </Section>
 
       {/* Classification */}

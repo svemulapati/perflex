@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import type { ExportBundle, SessionSnapshot } from '@/shared/types';
-import type { FlowStep } from '@/shared/flow';
 import { useSettingsStore } from './settings-store';
-import { useRecordingStore } from './recording-store';
 
 interface Meta {
   fps: number;
@@ -22,8 +20,6 @@ interface SessionState {
   clear: () => void;
   toggleRecording: () => void;
   requestExport: () => Promise<ExportBundle | null>;
-  /** Send a control action (e.g. flow-record-start) to the MAIN-world collector. */
-  sendControl: (action: string) => void;
 }
 
 let port: chrome.runtime.Port | null = null;
@@ -69,14 +65,6 @@ export const useSessionStore = create<SessionState>((set, get) => {
       worker?.postMessage({ type: 'meta', fps: msg.fps, frameHealth: msg.frameHealth });
     } else if (msg.type === 'reset') {
       worker?.postMessage({ type: 'reset' });
-      // A navigation tore down the page's collector and re-injected a fresh one
-      // that isn't recording. If a flow is in progress, re-arm it — retry a few
-      // times to cover the new collector's injection timing.
-      if (useRecordingStore.getState().recording) {
-        [350, 800, 1500].forEach((delay) => setTimeout(() => get().sendControl('flow-record-resume'), delay));
-      }
-    } else if (msg.type === 'flow-step' && msg.step) {
-      useRecordingStore.getState().addStep(msg.step as FlowStep);
     }
   }
 
@@ -221,19 +209,6 @@ export const useSessionStore = create<SessionState>((set, get) => {
         // Safety timeout so the UI never hangs on a dead worker.
         setTimeout(() => resolve(null), 4000);
       });
-    },
-
-    sendControl(action) {
-      // Message the page's content script directly — far more robust than
-      // routing through the background port (no dependency on the service
-      // worker being awake or a bound tab).
-      const id = get().tabId ?? activeTabId;
-      if (id == null) return;
-      try {
-        chrome.tabs.sendMessage(id, { type: 'perflex:control', action }).catch(() => {});
-      } catch {
-        /* tab closing — ignore */
-      }
     },
   };
 });

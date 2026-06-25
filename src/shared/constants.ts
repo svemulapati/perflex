@@ -53,23 +53,19 @@ export const HEALTH_WEIGHTS = {
 /**
  * Opt-in collector modules (Phase 2). Each adds main-thread overhead, so they
  * stay off until the user enables them — the substrate the WebSocket/Worker/
- * heatmap/replay/flow features check before doing any work. Persisted in
- * settings and (for collector-side modules) passed in at injection time.
+ * heatmap features check before doing any work. Persisted in settings and
+ * (for collector-side modules) passed in at injection time.
  */
 export interface CollectorFeatureFlags {
   websocketMonitor: boolean;
   workerMonitor: boolean;
-  flowRecorder: boolean;
   heatmap: boolean;
-  replay: boolean;
 }
 
 export const DEFAULT_FEATURE_FLAGS: CollectorFeatureFlags = {
   websocketMonitor: false,
   workerMonitor: false,
-  flowRecorder: false,
   heatmap: false,
-  replay: false,
 };
 
 /** Core Web Vitals thresholds (good / needs-improvement boundaries). */

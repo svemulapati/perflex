@@ -4,7 +4,6 @@
  * the background service worker, which routes to the side panel.
  */
 import type { CollectorEvent, RuntimeMessage } from '@/shared/types';
-import type { FlowStep } from '@/shared/flow';
 
 const PERFLEX_MESSAGE_SOURCE = 'perflex-collector';
 
@@ -16,9 +15,8 @@ const PERFLEX_MESSAGE_SOURCE = 'perflex-collector';
 
 interface CollectorMessage {
   source: typeof PERFLEX_MESSAGE_SOURCE;
-  kind: 'events' | 'meta' | 'flow-step';
+  kind: 'events' | 'meta';
   events?: CollectorEvent[];
-  step?: FlowStep;
   throttleLevel?: string;
   fps?: number;
   frameHealth?: number;
@@ -67,21 +65,12 @@ window.addEventListener('message', (e: MessageEvent) => {
     } catch {
       /* ignore */
     }
-  } else if (data.kind === 'flow-step' && data.step) {
-    // Flow-recording steps go straight up to the panel (not buffered/coalesced).
-    try {
-      chrome.runtime.sendMessage({ type: 'perflex:flow-step', step: data.step } as unknown as RuntimeMessage).catch(() => {});
-    } catch {
-      /* ignore */
-    }
   }
 });
 
-// Relay control commands from the extension down into the page (MAIN world).
-chrome.runtime.onMessage.addListener((message: { type?: string; action?: string }) => {
+// Relay overlay-toggle commands from the extension down into the page.
+chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
   if (message.type === 'perflex:toggle-overlay') {
     window.postMessage({ source: 'perflex-control', action: 'toggle-overlay' }, '*');
-  } else if (message.type === 'perflex:control' && message.action) {
-    window.postMessage({ source: 'perflex-control', action: message.action }, '*');
   }
 });
