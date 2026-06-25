@@ -2,6 +2,9 @@
   "name": "perflex",
   "version": "2.0.0",
   "description": "Real-time JavaScript performance profiling with function-level attribution and AI-powered remediation",
+  "author": "Sudeep Nag Vemulapati (https://github.com/svemulapati)",
+  "license": "MIT",
+  "homepage": "https://github.com/svemulapati/perflex",
   "type": "module",
   "scripts": {
     "dev": "npm run build:collector && vite",

@@ -255,13 +255,15 @@ Found a site where Perflex misbehaves or misses an issue? **[Open an issue](http
 
 ## 📄 License
 
-[MIT](LICENSE) © Perflex contributors. Free to use, fork, and ship.
+[MIT](LICENSE) © 2026 [Sudeep Nag Vemulapati](https://github.com/svemulapati). Free to use, fork, and ship.
 
 ---
 
 <div align="center">
 
 **If Perflex helped you find a slow function, please ⭐ star the repo — it genuinely helps others discover it.**
+
+Built by **[Sudeep Nag Vemulapati](https://github.com/svemulapati)**
 
 <sub>web performance · javascript profiler · chrome extension · manifest v3 · core web vitals · LCP · INP · CLS · long tasks · layout thrashing · forced reflow · flame chart · main thread · devtools · lighthouse alternative · RUM · performance monitoring · web vitals · frontend performance · bundle analysis · third-party scripts · AI code review · performance optimization</sub>
 
