@@ -1,0 +1,51 @@
+# Perflex performance check on every pull request.
+# Copy to .github/workflows/perflex.yml in your repo.
+name: Perflex Performance Check
+on: [pull_request]
+
+jobs:
+  perflex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Start your app (adjust to your project).
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm start &
+      - run: npx wait-on http://localhost:3000
+
+      # Install + run Perflex CI against a recorded flow.
+      - run: npm i -g perflex-ci && npx playwright install --with-deps chromium
+      - name: Run Perflex flow
+        id: perflex
+        run: |
+          perflex-ci \
+            --flow flows/checkout.flow.json \
+            --budgets perflex-budgets.json \
+            --url http://localhost:3000 \
+            --md perflex-report.md \
+            --out perflex-report.json
+        continue-on-error: true
+
+      - name: Comment PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('perflex-report.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      # Fail the job if the budget check failed.
+      - name: Enforce budget
+        if: steps.perflex.outcome == 'failure'
+        run: exit 1

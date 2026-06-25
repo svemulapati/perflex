@@ -1,0 +1,8 @@
+{
+  "budgets": [
+    { "metric": "lcp", "operator": "<=", "threshold": 2500, "severity": "error" },
+    { "metric": "cls", "operator": "<=", "threshold": 0.1, "severity": "error" },
+    { "metric": "tbt", "operator": "<=", "threshold": 300, "severity": "warning" },
+    { "metric": "fcp", "operator": "<=", "threshold": 1800, "severity": "warning" }
+  ]
+}

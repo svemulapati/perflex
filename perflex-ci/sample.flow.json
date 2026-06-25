@@ -1,0 +1,13 @@
+{
+  "id": "flow-sample",
+  "name": "Example smoke test",
+  "createdAt": 1719230400000,
+  "url": "https://example.com/",
+  "schemaVersion": 1,
+  "steps": [
+    { "action": "scroll", "selector": "window", "scrollPosition": { "x": 0, "y": 150 }, "timestamp": 800 },
+    { "action": "click", "selector": "a", "label": "More information", "timestamp": 1600 },
+    { "action": "navigate", "selector": "", "url": "https://www.iana.org/help/example-domains", "timestamp": 2400 }
+  ],
+  "baseline": { "healthScore": 95, "lcp": 1500, "inp": null, "cls": 0.02, "totalBlockingTime": 50 }
+}
