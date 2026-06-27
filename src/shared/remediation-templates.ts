@@ -589,8 +589,8 @@ export const REMEDIATIONS: Record<string, RemediationPlan> = {
       'Third-party scripts in <head> without async/defer delay first paint. Load them asynchronously, or via a facade until needed.',
     codeExample: {
       language: 'html',
-      before: '<script src="https://third-party.example/widget.js"></script>',
-      after: '<script src="https://third-party.example/widget.js" async></script>',
+      before: '<script src="VENDOR_SCRIPT_URL"></script>',
+      after: '<script src="VENDOR_SCRIPT_URL" async></script>',
     },
     riskLevel: 'verify',
     riskExplanation: 'Third-party init timing changes; verify the widget still initializes and any inline config runs first.',
@@ -640,8 +640,8 @@ export const REMEDIATIONS: Record<string, RemediationPlan> = {
       'Third-party scripts consuming a large share of main-thread time degrade responsiveness. Defer, lazy-load on interaction, or isolate in a worker/iframe (e.g., Partytown).',
     codeExample: {
       language: 'html',
-      before: '<script src="https://heavy-third-party.example/sdk.js"></script>',
-      after: '<script type="text/partytown" src="https://heavy-third-party.example/sdk.js"></script>',
+      before: '<script src="HEAVY_VENDOR_SCRIPT_URL"></script>',
+      after: '<script type="text/partytown" src="HEAVY_VENDOR_SCRIPT_URL"></script>',
     },
     riskLevel: 'review',
     riskExplanation: 'Moving third-party code off the main thread can break scripts that need direct DOM/synchronous APIs.',
