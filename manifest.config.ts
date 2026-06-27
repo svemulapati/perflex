@@ -3,7 +3,7 @@ import { defineManifest } from '@crxjs/vite-plugin';
 export default defineManifest({
   manifest_version: 3,
   name: 'Perflex',
-  version: '2.0.0',
+  version: '2.0.1',
   description:
     'Real-time JavaScript performance profiling with function-level attribution and AI-powered remediation',
   permissions: ['activeTab', 'sidePanel', 'storage', 'scripting', 'tabs', 'webNavigation'],
