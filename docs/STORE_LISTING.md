@@ -4,8 +4,8 @@ Everything you need to paste into the [Developer Dashboard](https://chrome.googl
 
 ## 1. Upload package
 
-- File: **`perflex-2.0.0.zip`** (repo root, rebuilt by `npm run build` → zipped from `dist/`).
-- `manifest.json` is at the zip root ✔ — manifest `version` is **2.0.0** (must be higher than the published version).
+- File: **`perflex-2.0.1.zip`** (repo root, rebuilt by `npm run build` → zipped from `dist/`).
+- `manifest.json` is at the zip root ✔ — manifest `version` is **2.0.1** (must be higher than the published version).
 
 ## 2. Store listing
 
